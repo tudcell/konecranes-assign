@@ -1,6 +1,5 @@
-package com.example.konecranes.messaging;
+package com.example.konecranes.messaging.gateway;
 
-import com.example.konecranes.service.VehicleSessionHandler;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -54,3 +53,4 @@ public class VehicleGatewayServer {
         clientPool.shutdownNow();
     }
 }
+

@@ -1,7 +1,9 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.messaging.EnvironmentUpdate;
+import com.example.konecranes.messaging.gateway.VehicleConnectionManager;
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.repository.VehicleRegistry;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;

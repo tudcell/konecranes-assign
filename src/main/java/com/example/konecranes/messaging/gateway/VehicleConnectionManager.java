@@ -1,10 +1,10 @@
-package com.example.konecranes.service;
+package com.example.konecranes.messaging.gateway;
 
 import com.example.konecranes.messaging.ControlCommand;
 import com.example.konecranes.messaging.EnvironmentUpdate;
-import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.messaging.RegisterVehicleAck;
 import com.example.konecranes.messaging.WireMessage;
+import com.example.konecranes.model.MessageType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
@@ -55,3 +55,4 @@ public class VehicleConnectionManager {
         }
     }
 }
+

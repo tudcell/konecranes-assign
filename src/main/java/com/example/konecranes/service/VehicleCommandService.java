@@ -1,6 +1,7 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.messaging.ControlCommand;
+import com.example.konecranes.messaging.gateway.VehicleConnectionManager;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;

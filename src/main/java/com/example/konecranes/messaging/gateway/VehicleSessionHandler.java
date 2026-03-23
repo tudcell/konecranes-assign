@@ -1,9 +1,11 @@
-package com.example.konecranes.service;
+package com.example.konecranes.messaging.gateway;
 
-import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.messaging.WireMessage;
+import com.example.konecranes.model.MessageType;
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.service.VehicleSessionService;
+import com.example.konecranes.service.VehicleUpdateService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -64,3 +66,4 @@ public class VehicleSessionHandler {
         }
     }
 }
+

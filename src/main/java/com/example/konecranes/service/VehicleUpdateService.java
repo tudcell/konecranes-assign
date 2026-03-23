@@ -1,6 +1,7 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.repository.VehicleRegistry;
 import org.springframework.stereotype.Service;
 
 @Service

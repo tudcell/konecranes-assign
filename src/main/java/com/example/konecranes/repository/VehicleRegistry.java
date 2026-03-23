@@ -1,7 +1,7 @@
-package com.example.konecranes.service;
+package com.example.konecranes.repository;
 
 import com.example.konecranes.model.VehicleState;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Service
+@Repository
 public class VehicleRegistry {
 
     private final Map<String, VehicleState> vehicles = new ConcurrentHashMap<>();
@@ -45,3 +45,4 @@ public class VehicleRegistry {
         vehicles.remove(vehicleId);
     }
 }
+

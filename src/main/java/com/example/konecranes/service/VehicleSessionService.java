@@ -1,12 +1,14 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.config.SimulationProperties;
+import com.example.konecranes.messaging.gateway.VehicleConnectionManager;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.RegisterVehicleAck;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.model.SimulationWorld;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
+import com.example.konecranes.repository.VehicleRegistry;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedWriter;

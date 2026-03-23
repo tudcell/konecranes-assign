@@ -1,4 +1,4 @@
-package com.example.konecranes.messaging;
+package com.example.konecranes.model;
 
 public enum MessageType {
     REGISTER,
@@ -9,3 +9,4 @@ public enum MessageType {
     HEARTBEAT,
     DISCONNECT
 }
+

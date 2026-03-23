@@ -5,6 +5,7 @@ import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.SimulationSnapshot;
 import com.example.konecranes.model.SimulationWorld;
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.repository.VehicleRegistry;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
