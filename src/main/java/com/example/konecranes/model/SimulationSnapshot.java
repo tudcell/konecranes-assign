@@ -9,7 +9,7 @@ public class SimulationSnapshot {
     private int collisionWarnings;
 
     public long getGeneratedAt() {
-        return generatedAt;
+        return this.generatedAt;
     }
 
     public void setGeneratedAt(long generatedAt) {
@@ -17,7 +17,7 @@ public class SimulationSnapshot {
     }
 
     public SimulationWorld getWorld() {
-        return world;
+        return this.world;
     }
 
     public void setWorld(SimulationWorld world) {
@@ -25,7 +25,7 @@ public class SimulationSnapshot {
     }
 
     public List<VehicleState> getVehicles() {
-        return vehicles;
+        return this.vehicles;
     }
 
     public void setVehicles(List<VehicleState> vehicles) {
@@ -33,7 +33,7 @@ public class SimulationSnapshot {
     }
 
     public int getCollisionWarnings() {
-        return collisionWarnings;
+        return this.collisionWarnings;
     }
 
     public void setCollisionWarnings(int collisionWarnings) {

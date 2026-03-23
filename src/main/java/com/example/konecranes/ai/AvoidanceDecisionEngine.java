@@ -32,7 +32,7 @@ public class AvoidanceDecisionEngine {
                 .orElseThrow(IllegalStateException::new);
 
         RiskAssessment current = riskEstimator.assess(self, nearbyVehicles);
-        AvoidanceAction action = current.getRiskScore() < 0.18 ? AvoidanceAction.KEEP_COURSE : best.getAction();
+        AvoidanceAction action = current.getRiskScore() < 0.12 ? AvoidanceAction.KEEP_COURSE : best.getAction();
         return new DecisionResult(action, current.getRiskScore(), current.getRiskLevel());
     }
 
