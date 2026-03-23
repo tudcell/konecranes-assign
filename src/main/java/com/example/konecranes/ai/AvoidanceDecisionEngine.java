@@ -23,10 +23,9 @@ public class AvoidanceDecisionEngine {
 
         Candidate best = Arrays.asList(
                         candidate(self, nearbyVehicles, AvoidanceAction.KEEP_COURSE, 0.0, 1.0),
-                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_LEFT, -15.0, 1.0),
-                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_RIGHT, 15.0, 1.0),
-                        candidate(self, nearbyVehicles, AvoidanceAction.SLOW_DOWN, 0.0, 0.6),
-                        candidate(self, nearbyVehicles, AvoidanceAction.EMERGENCY_STOP, 0.0, 0.0))
+                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_LEFT, -8.0, 1.0),
+                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_RIGHT, 8.0, 1.0),
+                        candidate(self, nearbyVehicles, AvoidanceAction.SLOW_DOWN, 0.0, 0.82))
                 .stream()
                 .min(Comparator.comparingDouble(Candidate::getScore))
                 .orElseThrow(IllegalStateException::new);

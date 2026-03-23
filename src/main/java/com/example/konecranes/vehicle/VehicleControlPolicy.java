@@ -62,13 +62,16 @@ public class VehicleControlPolicy {
 
         switch (result.getAction()) {
             case TURN_LEFT:
-                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() - 20.0);
+                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() - 8.0);
                 break;
             case TURN_RIGHT:
-                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() + 20.0);
+                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() + 8.0);
                 break;
             case SLOW_DOWN:
-                current.setSpeed(Math.max(15.0, current.getSpeed() * 0.85));
+                // Only reduce speed if it's still above initial; don't compound reductions
+                if (current.getSpeed() > config.getInitialSpeed()) {
+                    current.setSpeed(Math.max(config.getInitialSpeed(), current.getSpeed() * 0.90));
+                }
                 break;
             case EMERGENCY_STOP:
                 current.setSpeed(0.0);
@@ -77,6 +80,9 @@ public class VehicleControlPolicy {
             case KEEP_COURSE:
                 if (current.getStatus() == VehicleStatus.STOPPED) {
                     current.setSpeed(config.getInitialSpeed());
+                } else if (current.getSpeed() < config.getInitialSpeed()) {
+                    // Gradually restore speed towards initial when no threat
+                    current.setSpeed(Math.min(config.getInitialSpeed(), current.getSpeed() * 1.08));
                 }
                 current.setStatus(VehicleStatus.ACTIVE);
                 break;

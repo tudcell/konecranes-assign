@@ -7,12 +7,14 @@ import com.example.konecranes.model.VehicleStatus;
 import java.util.function.DoubleConsumer;
 
 /**
- * Handles immediate collision checks and emergency maneuvers.
+ * Handles only last-moment collision prevention.
+ * Normal steering adjustments should be handled by the control/AI layer.
  */
 public class VehicleSafetyEngine {
 
-    private static final double COLLISION_GUARD_MARGIN = 8.0;
-    private static final double COLLISION_LOOKAHEAD_SECONDS = 0.25;
+    private static final double EMERGENCY_MARGIN = 3.0;
+    private static final double EMERGENCY_LOOKAHEAD_SECONDS = 0.08;
+    private static final double BRAKE_LOOKAHEAD_SECONDS = 0.15;
 
     public VehicleState findImmediateThreat(VehicleState state,
                                             Iterable<VehicleState> nearbyVehicles,
@@ -27,8 +29,9 @@ public class VehicleSafetyEngine {
             }
 
             double nowDistance = distance(state.getX(), state.getY(), other.getX(), other.getY());
-            double collisionDistance = state.getRadius() + other.getRadius() + COLLISION_GUARD_MARGIN;
-            if (nowDistance < nearestDistance && isCollisionLikely(state, other, nextX, nextY, collisionDistance)) {
+            double emergencyDistance = state.getRadius() + other.getRadius() + EMERGENCY_MARGIN;
+
+            if (nowDistance < nearestDistance && isEmergencyLikely(state, other, nextX, nextY, emergencyDistance)) {
                 nearestDistance = nowDistance;
                 nearestThreat = other;
             }
@@ -37,49 +40,59 @@ public class VehicleSafetyEngine {
         return nearestThreat;
     }
 
-    public void applyEmergencyManeuver(VehicleState state, VehicleState threat, DoubleConsumer targetDirectionSetter) {
+    public void applyEmergencyManeuver(VehicleState state,
+                                       VehicleState threat,
+                                       DoubleConsumer targetDirectionSetter) {
         double dx = state.getX() - threat.getX();
         double dy = state.getY() - threat.getY();
         double separation = distance(state.getX(), state.getY(), threat.getX(), threat.getY());
-        double minimumSeparation = state.getRadius() + threat.getRadius() + 2.0;
+        double hardStopDistance = state.getRadius() + threat.getRadius() + 0.5;
+        double softBrakeDistance = state.getRadius() + threat.getRadius() + 10.0;
 
-        if (separation < minimumSeparation) {
-            state.setSpeed(0.0);
+        double escapeHeading = Math.toDegrees(Math.atan2(dy, dx));
+
+        if (separation <= hardStopDistance) {
+            state.setSpeed(Math.max(0.0, state.getSpeed() * 0.25));
             state.setStatus(VehicleStatus.STOPPED);
             state.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
-            targetDirectionSetter.accept(Math.toDegrees(Math.atan2(dy, dx)));
+            targetDirectionSetter.accept(escapeHeading);
+            return;
+        }
+
+        if (separation <= softBrakeDistance) {
+            state.setSpeed(Math.max(20.0, state.getSpeed() * 0.80));
+            state.setStatus(VehicleStatus.ACTIVE);
+            state.setCurrentAction(AvoidanceAction.SLOW_DOWN);
+            targetDirectionSetter.accept(escapeHeading);
             return;
         }
 
         state.setStatus(VehicleStatus.ACTIVE);
-        state.setCurrentAction(AvoidanceAction.SLOW_DOWN);
-        state.setSpeed(Math.max(20.0, state.getSpeed() * 0.7));
-        targetDirectionSetter.accept(Math.toDegrees(Math.atan2(dy, dx)));
+        state.setCurrentAction(AvoidanceAction.KEEP_COURSE);
     }
 
-    private boolean isCollisionLikely(VehicleState self,
+    private boolean isEmergencyLikely(VehicleState self,
                                       VehicleState other,
                                       double selfNextX,
                                       double selfNextY,
-                                      double collisionDistance) {
+                                      double emergencyDistance) {
         double distanceAtNextStep = distance(selfNextX, selfNextY, other.getX(), other.getY());
-        if (distanceAtNextStep <= collisionDistance) {
+        if (distanceAtNextStep <= emergencyDistance) {
             return true;
         }
 
         double otherHeadingRad = Math.toRadians(other.getDirectionDeg());
-        double otherFutureX = other.getX() + Math.cos(otherHeadingRad) * other.getSpeed() * COLLISION_LOOKAHEAD_SECONDS;
-        double otherFutureY = other.getY() + Math.sin(otherHeadingRad) * other.getSpeed() * COLLISION_LOOKAHEAD_SECONDS;
+        double otherFutureX = other.getX() + Math.cos(otherHeadingRad) * other.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
+        double otherFutureY = other.getY() + Math.sin(otherHeadingRad) * other.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
 
         double selfHeadingRad = Math.toRadians(self.getDirectionDeg());
-        double selfFutureX = self.getX() + Math.cos(selfHeadingRad) * self.getSpeed() * COLLISION_LOOKAHEAD_SECONDS;
-        double selfFutureY = self.getY() + Math.sin(selfHeadingRad) * self.getSpeed() * COLLISION_LOOKAHEAD_SECONDS;
+        double selfFutureX = self.getX() + Math.cos(selfHeadingRad) * self.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
+        double selfFutureY = self.getY() + Math.sin(selfHeadingRad) * self.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
 
-        return distance(selfFutureX, selfFutureY, otherFutureX, otherFutureY) <= collisionDistance;
+        return distance(selfFutureX, selfFutureY, otherFutureX, otherFutureY) <= emergencyDistance;
     }
 
     private double distance(double x1, double y1, double x2, double y2) {
         return Math.hypot(x1 - x2, y1 - y2);
     }
 }
-

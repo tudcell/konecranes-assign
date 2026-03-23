@@ -2,6 +2,7 @@ package com.example.konecranes.vehicle;
 
 import com.example.konecranes.messaging.ControlCommand;
 import com.example.konecranes.messaging.EnvironmentUpdate;
+import com.example.konecranes.model.AvoidanceAction;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
 
@@ -9,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -17,12 +19,16 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class VehicleBehaviorEngine {
 
+    private static final double STUCK_DISTANCE_THRESHOLD = 1.0;
+    private static final long STUCK_TIME_MILLIS = 2000L;
+
     private final VehicleProcessConfig config;
     private final ConcurrentMap<String, VehicleState> nearbyVehicles = new ConcurrentHashMap<>();
     private final AtomicReference<VehicleState> selfState = new AtomicReference<>();
     private final VehicleMotionEngine motionEngine;
     private final VehicleSafetyEngine safetyEngine;
     private final VehicleControlPolicy controlPolicy;
+    private final AtomicReference<PositionSnapshot> lastPositionSnapshot = new AtomicReference<>();
 
     public VehicleBehaviorEngine(VehicleProcessConfig config) {
         this.config = config;
@@ -38,6 +44,7 @@ public class VehicleBehaviorEngine {
         initial.setTimestamp(System.currentTimeMillis());
 
         selfState.set(initial);
+        lastPositionSnapshot.set(new PositionSnapshot(initial.getX(), initial.getY(), System.currentTimeMillis()));
         this.motionEngine = new VehicleMotionEngine(config, initial.getDirectionDeg());
         this.safetyEngine = new VehicleSafetyEngine();
         this.controlPolicy = new VehicleControlPolicy(config);
@@ -76,6 +83,9 @@ public class VehicleBehaviorEngine {
 
         motionEngine.bounceIfNeeded(state);
         state.setTimestamp(System.currentTimeMillis());
+
+        // Check if vehicle is stuck and apply emergency escape if needed
+        checkAndEscapeIfStuck(state);
     }
 
     public void aiTick() {
@@ -84,8 +94,51 @@ public class VehicleBehaviorEngine {
         controlPolicy.aiTick(current, context, motionEngine::getTargetDirection, motionEngine::setTargetDirection);
     }
 
+    private void checkAndEscapeIfStuck(VehicleState state) {
+        PositionSnapshot snapshot = lastPositionSnapshot.get();
+        long now = System.currentTimeMillis();
+        double distance = distance(state.getX(), state.getY(), snapshot.x, snapshot.y);
+        long timeDelta = now - snapshot.timestamp;
+
+        // If vehicle hasn't moved much and has been stuck for too long, apply escape maneuver
+        if (state.getStatus() == VehicleStatus.ACTIVE && 
+            timeDelta > STUCK_TIME_MILLIS && 
+            distance < STUCK_DISTANCE_THRESHOLD) {
+            // Reverse direction and boost speed to break deadlock
+            state.setDirectionDeg(normalizeDirection(state.getDirectionDeg() + 180.0));
+            motionEngine.setTargetDirection(state.getDirectionDeg());
+            state.setSpeed(config.getInitialSpeed() * 1.5);
+            state.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
+            lastPositionSnapshot.set(new PositionSnapshot(state.getX(), state.getY(), now));
+        } else if (timeDelta > STUCK_TIME_MILLIS) {
+            // Reset snapshot periodically to allow fresh stuck detection
+            lastPositionSnapshot.set(new PositionSnapshot(state.getX(), state.getY(), now));
+        }
+    }
+
+    private double distance(double x1, double y1, double x2, double y2) {
+        return Math.hypot(x1 - x2, y1 - y2);
+    }
+
+    private double normalizeDirection(double direction) {
+        double normalized = direction % 360.0;
+        return normalized < 0.0 ? normalized + 360.0 : normalized;
+    }
+
     public VehicleState currentStateCopy() {
         return selfState.get().copy();
+    }
+
+    private static class PositionSnapshot {
+        final double x;
+        final double y;
+        final long timestamp;
+
+        PositionSnapshot(double x, double y, long timestamp) {
+            this.x = x;
+            this.y = y;
+            this.timestamp = timestamp;
+        }
     }
 }
 

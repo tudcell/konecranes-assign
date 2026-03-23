@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class VehicleMotionEngine {
 
-    private static final double MAX_TURN_DEG_PER_TICK = 12.0;
+    private static final double MAX_TURN_DEG_PER_TICK = 8.0;
 
     private final VehicleProcessConfig config;
     private final AtomicLong targetDirectionDegTimes100 = new AtomicLong(0L);

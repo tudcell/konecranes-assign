@@ -1,6 +1,7 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.config.SimulationProperties;
+import com.example.konecranes.repository.VehicleRegistry;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -10,14 +11,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 public class VehicleSpawnerService {
 
-    private final SimulationProperties properties;
+    private static final double MIN_SPAWN_DISTANCE = 100.0;
+    private static final int MAX_SPAWN_ATTEMPTS = 50;
 
-    public VehicleSpawnerService(SimulationProperties properties) {
+    private final SimulationProperties properties;
+    private final VehicleRegistry vehicleRegistry;
+
+    public VehicleSpawnerService(SimulationProperties properties, VehicleRegistry vehicleRegistry) {
         this.properties = properties;
+        this.vehicleRegistry = vehicleRegistry;
     }
 
     public List<String> spawn(int count) throws IOException {
@@ -31,6 +38,9 @@ public class VehicleSpawnerService {
             String vehicleId = "VH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
             ids.add(vehicleId);
 
+            // Find a safe spawn position away from existing vehicles
+            SpawnPosition position = findSafeSpawnPosition();
+
             List<String> command = new ArrayList<>();
             command.add(resolveJavaExecutable());
             command.add("-jar");
@@ -41,8 +51,8 @@ public class VehicleSpawnerService {
             command.add("--gatewayPort=" + properties.getGateway().getPort());
             command.add("--worldWidth=" + properties.getWorld().getWidth());
             command.add("--worldHeight=" + properties.getWorld().getHeight());
-            command.add("--initialX=" + random(50.0, properties.getWorld().getWidth() - 50.0));
-            command.add("--initialY=" + random(50.0, properties.getWorld().getHeight() - 50.0));
+            command.add("--initialX=" + position.x);
+            command.add("--initialY=" + position.y);
             command.add("--initialDirectionDeg=" + random(0.0, 359.0));
             command.add("--initialSpeed=" + properties.getVehicle().getDefaultSpeed());
             command.add("--tickMillis=" + properties.getVehicle().getTickMillis());
@@ -55,6 +65,34 @@ public class VehicleSpawnerService {
         return ids;
     }
 
+    private SpawnPosition findSafeSpawnPosition() {
+        List<SpawnPosition> existingPositions = vehicleRegistry.findAll().stream()
+                .map(v -> new SpawnPosition(v.getX(), v.getY()))
+                .collect(Collectors.toList());
+
+        int attempts = 0;
+        while (attempts < MAX_SPAWN_ATTEMPTS) {
+            double x = random(50.0, properties.getWorld().getWidth() - 50.0);
+            double y = random(50.0, properties.getWorld().getHeight() - 50.0);
+
+            boolean tooClose = existingPositions.stream()
+                    .anyMatch(pos -> distance(x, y, pos.x, pos.y) < MIN_SPAWN_DISTANCE);
+
+            if (!tooClose) {
+                return new SpawnPosition(x, y);
+            }
+            attempts++;
+        }
+
+        // Fallback: return random position if no safe spot found after max attempts
+        return new SpawnPosition(random(50.0, properties.getWorld().getWidth() - 50.0),
+                random(50.0, properties.getWorld().getHeight() - 50.0));
+    }
+
+    private double distance(double x1, double y1, double x2, double y2) {
+        return Math.hypot(x1 - x2, y1 - y2);
+    }
+
     private String resolveJavaExecutable() {
         String javaHome = System.getProperty("java.home");
         return Path.of(javaHome, "bin", "java").toString();
@@ -62,5 +100,15 @@ public class VehicleSpawnerService {
 
     private double random(double min, double max) {
         return ThreadLocalRandom.current().nextDouble(min, max);
+    }
+
+    private static class SpawnPosition {
+        final double x;
+        final double y;
+
+        SpawnPosition(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
     }
 }

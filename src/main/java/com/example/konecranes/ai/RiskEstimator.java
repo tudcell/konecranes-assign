@@ -33,9 +33,9 @@ public class RiskEstimator {
         double intersectionFactor = headingConvergence(a, b);
         double relativeSpeed = Math.abs(a.getSpeed() - b.getSpeed());
 
-        double dangerDistance = a.getRadius() + b.getRadius() + 35.0 + (relativeSpeed * 0.18);
-        double proximityScore = inverseNormalize(distanceNow, dangerDistance, 320.0);
-        double futureScore = inverseNormalize(minPredictedDistance, dangerDistance, 280.0);
+        double dangerDistance = a.getRadius() + b.getRadius() + 18.0 + (relativeSpeed * 0.10);
+        double proximityScore = inverseNormalize(distanceNow, dangerDistance, 220.0);
+        double futureScore = inverseNormalize(minPredictedDistance, dangerDistance, 180.0);
 
         double risk = 0.30 * proximityScore
                 + 0.40 * futureScore
@@ -46,10 +46,10 @@ public class RiskEstimator {
     }
 
     private RiskLevel toLevel(double score) {
-        if (score >= 0.68) {
+        if (score >= 0.82) {
             return RiskLevel.HIGH;
         }
-        if (score >= 0.32) {
+        if (score >= 0.50) {
             return RiskLevel.MEDIUM;
         }
         return RiskLevel.LOW;
