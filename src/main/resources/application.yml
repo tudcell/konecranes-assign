@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+simulation:
+  world:
+    width: 1000
+    height: 700
+  gateway:
+    host: 127.0.0.1
+    port: 9090
+  vehicle:
+    jarPath: target/konecranes-ai-sim-1.0.0.jar
+    defaultSpeed: 60.0
+    tickMillis: 100
