@@ -1,7 +1,7 @@
 package com.example.konecranes.controller;
 
-import com.example.konecranes.service.VehicleCommandService;
-import com.example.konecranes.service.VehicleSpawnerService;
+import com.example.konecranes.service.port.in.VehicleControlUseCase;
+import com.example.konecranes.service.port.in.VehicleSpawnUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,11 +22,11 @@ import java.util.List;
 @RequestMapping("/api/vehicles")
 public class VehicleController {
 
-    private final VehicleSpawnerService vehicleSpawnerService;
-    private final VehicleCommandService vehicleCommandService;
+    private final VehicleSpawnUseCase vehicleSpawnerService;
+    private final VehicleControlUseCase vehicleCommandService;
 
-    public VehicleController(VehicleSpawnerService vehicleSpawnerService,
-                             VehicleCommandService vehicleCommandService) {
+    public VehicleController(VehicleSpawnUseCase vehicleSpawnerService,
+                             VehicleControlUseCase vehicleCommandService) {
         this.vehicleSpawnerService = vehicleSpawnerService;
         this.vehicleCommandService = vehicleCommandService;
     }

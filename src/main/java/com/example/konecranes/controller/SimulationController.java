@@ -1,8 +1,8 @@
 package com.example.konecranes.controller;
 
 import com.example.konecranes.model.SimulationSnapshot;
-import com.example.konecranes.service.SimulationSnapshotService;
-import com.example.konecranes.service.SseSnapshotService;
+import com.example.konecranes.service.port.in.SimulationQueryUseCase;
+import com.example.konecranes.service.port.in.SimulationStreamUseCase;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,10 +13,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequestMapping("/api/simulation")
 public class SimulationController {
 
-    private final SimulationSnapshotService snapshotService;
-    private final SseSnapshotService sseSnapshotService;
+    private final SimulationQueryUseCase snapshotService;
+    private final SimulationStreamUseCase sseSnapshotService;
 
-    public SimulationController(SimulationSnapshotService snapshotService, SseSnapshotService sseSnapshotService) {
+    public SimulationController(SimulationQueryUseCase snapshotService, SimulationStreamUseCase sseSnapshotService) {
         this.snapshotService = snapshotService;
         this.sseSnapshotService = sseSnapshotService;
     }

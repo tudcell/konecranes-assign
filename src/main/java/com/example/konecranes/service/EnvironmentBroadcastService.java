@@ -1,9 +1,9 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.messaging.EnvironmentUpdate;
-import com.example.konecranes.messaging.gateway.VehicleConnectionManager;
 import com.example.konecranes.model.VehicleState;
-import com.example.konecranes.repository.VehicleRegistry;
+import com.example.konecranes.service.port.out.VehicleGatewayPort;
+import com.example.konecranes.service.port.out.VehicleStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,17 +16,17 @@ public class EnvironmentBroadcastService {
 
     private static final Logger logger = LoggerFactory.getLogger(EnvironmentBroadcastService.class);
 
-    private final VehicleRegistry vehicleRegistry;
-    private final VehicleConnectionManager connectionManager;
+    private final VehicleStateStore vehicleStateStore;
+    private final VehicleGatewayPort connectionManager;
 
-    public EnvironmentBroadcastService(VehicleRegistry vehicleRegistry,
-                                       VehicleConnectionManager connectionManager) {
-        this.vehicleRegistry = vehicleRegistry;
+    public EnvironmentBroadcastService(VehicleStateStore vehicleStateStore,
+                                       VehicleGatewayPort connectionManager) {
+        this.vehicleStateStore = vehicleStateStore;
         this.connectionManager = connectionManager;
     }
 
     public void broadcastToAll() {
-        List<VehicleState> allVehicles = vehicleRegistry.findAll();
+        List<VehicleState> allVehicles = vehicleStateStore.findAll();
         for (VehicleState self : allVehicles) {
             EnvironmentUpdate update = new EnvironmentUpdate();
             update.setTimestamp(System.currentTimeMillis());

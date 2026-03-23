@@ -1,7 +1,9 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.config.SimulationProperties;
-import com.example.konecranes.repository.VehicleRegistry;
+import com.example.konecranes.service.port.in.VehicleSpawnUseCase;
+import com.example.konecranes.service.port.out.VehicleProcessLauncherPort;
+import com.example.konecranes.service.port.out.VehicleStateStore;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -14,16 +16,21 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
-public class VehicleSpawnerService {
+public class VehicleSpawnerService implements VehicleSpawnUseCase {
 
     private final SimulationProperties properties;
-    private final VehicleRegistry vehicleRegistry;
+    private final VehicleStateStore vehicleStateStore;
+    private final VehicleProcessLauncherPort processLauncher;
 
-    public VehicleSpawnerService(SimulationProperties properties, VehicleRegistry vehicleRegistry) {
+    public VehicleSpawnerService(SimulationProperties properties,
+                                 VehicleStateStore vehicleStateStore,
+                                 VehicleProcessLauncherPort processLauncher) {
         this.properties = properties;
-        this.vehicleRegistry = vehicleRegistry;
+        this.vehicleStateStore = vehicleStateStore;
+        this.processLauncher = processLauncher;
     }
 
+    @Override
     public List<String> spawn(int count) throws IOException {
         Path jarPath = Path.of(properties.getVehicle().getJarPath()).toAbsolutePath();
         if (!Files.exists(jarPath)) {
@@ -70,16 +77,13 @@ public class VehicleSpawnerService {
             command.add("--stuckTimeMillis=" + properties.getVehicle().getTuning().getStuckTimeMillis());
             command.add("--stuckEscapeSpeedFactor=" + properties.getVehicle().getTuning().getStuckEscapeSpeedFactor());
 
-            new ProcessBuilder(command)
-                    .redirectErrorStream(true)
-                    .inheritIO()
-                    .start();
+            processLauncher.launch(command);
         }
         return ids;
     }
 
     private SpawnPosition findSafeSpawnPosition() {
-        List<SpawnPosition> existingPositions = vehicleRegistry.findAll().stream()
+        List<SpawnPosition> existingPositions = vehicleStateStore.findAll().stream()
                 .map(v -> new SpawnPosition(v.getX(), v.getY()))
                 .collect(Collectors.toList());
 

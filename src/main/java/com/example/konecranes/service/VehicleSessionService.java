@@ -1,14 +1,14 @@
 package com.example.konecranes.service;
 
 import com.example.konecranes.config.SimulationProperties;
-import com.example.konecranes.messaging.gateway.VehicleConnectionManager;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.RegisterVehicleAck;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.model.SimulationWorld;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
-import com.example.konecranes.repository.VehicleRegistry;
+import com.example.konecranes.service.port.out.VehicleGatewayPort;
+import com.example.konecranes.service.port.out.VehicleStateStore;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedWriter;
@@ -17,14 +17,14 @@ import java.io.IOException;
 @Service
 public class VehicleSessionService {
 
-    private final VehicleRegistry vehicleRegistry;
-    private final VehicleConnectionManager connectionManager;
+    private final VehicleStateStore vehicleStateStore;
+    private final VehicleGatewayPort connectionManager;
     private final SimulationProperties properties;
 
-    public VehicleSessionService(VehicleRegistry vehicleRegistry,
-                                 VehicleConnectionManager connectionManager,
+    public VehicleSessionService(VehicleStateStore vehicleStateStore,
+                                 VehicleGatewayPort connectionManager,
                                  SimulationProperties properties) {
-        this.vehicleRegistry = vehicleRegistry;
+        this.vehicleStateStore = vehicleStateStore;
         this.connectionManager = connectionManager;
         this.properties = properties;
     }
@@ -40,7 +40,7 @@ public class VehicleSessionService {
         state.setTimestamp(System.currentTimeMillis());
         state.setStatus(VehicleStatus.ACTIVE);
 
-        vehicleRegistry.upsert(state);
+        vehicleStateStore.upsert(state);
         connectionManager.attach(request.getVehicleId(), writer);
 
         RegisterVehicleAck ack = new RegisterVehicleAck();
@@ -49,15 +49,15 @@ public class VehicleSessionService {
         connectionManager.sendAck(request.getVehicleId(), ack);
 
         EnvironmentUpdate environment = new EnvironmentUpdate();
-        environment.setNearbyVehicles(vehicleRegistry.findAllExcept(request.getVehicleId()));
+        environment.setNearbyVehicles(vehicleStateStore.findAllExcept(request.getVehicleId()));
         environment.setTimestamp(System.currentTimeMillis());
         connectionManager.sendEnvironment(request.getVehicleId(), environment);
     }
 
     public void disconnect(String vehicleId) {
-        vehicleRegistry.findById(vehicleId).ifPresent(state -> {
+        vehicleStateStore.findById(vehicleId).ifPresent(state -> {
             state.setStatus(VehicleStatus.DISCONNECTED);
-            vehicleRegistry.upsert(state);
+            vehicleStateStore.upsert(state);
         });
         connectionManager.detach(vehicleId);
     }

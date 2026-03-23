@@ -57,6 +57,12 @@ Candidate actions:
 - `AvoidanceDecisionEngine` and `RiskEstimator`: AI logic isolated from transport and UI
 - `VehicleSpawnerService`: process bootstrapping isolated from coordination logic
 
+## Layered architecture (ports and adapters)
+- Inbound use-cases live in `src/main/java/com/example/konecranes/service/port/in/` and are consumed by controllers/scheduler.
+- Outbound ports live in `src/main/java/com/example/konecranes/service/port/out/` and are used by services.
+- Infrastructure adapters implement ports: `VehicleRegistry`, `VehicleConnectionManager`, `SseSnapshotService`, and `JvmVehicleProcessLauncher`.
+- This keeps dependencies one-way (`controller -> service -> port -> adapter`) and reduces coupling to concrete transport/storage classes.
+
 ## Run
 
 ### 1. Build
@@ -107,6 +113,13 @@ curl -X POST http://localhost:8080/api/vehicles/VH-XXXX/speed \
 - `simulation.vehicle.jarPath` points to the packaged application jar and is used by the coordinator to spawn new vehicle processes.
 - Vehicles use boundary bounce behavior to stay inside the world.
 - Manual commands place the vehicle in `USER_OVERRIDE` action mode.
+- Runtime tuning is centralized in `simulation.scheduler.fixedDelayMillis` and `simulation.vehicle.tuning.*` in `src/main/resources/application.yml`.
+
+## Tests
+- Added starter unit tests in `src/test/java/com/example/konecranes/service/VehicleCommandServiceTest.java`.
+- Added starter unit tests in `src/test/java/com/example/konecranes/service/VehicleSessionServiceTest.java`.
+- Added starter unit tests in `src/test/java/com/example/konecranes/service/SimulationSnapshotServiceTest.java`.
+- Added copy-semantics tests in `src/test/java/com/example/konecranes/repository/VehicleRegistryTest.java`.
 
 ## Suggested next improvements
 - replace raw TCP with Netty or gRPC for stronger transport concerns
