@@ -16,9 +16,6 @@ import java.util.stream.Collectors;
 @Service
 public class VehicleSpawnerService {
 
-    private static final double MIN_SPAWN_DISTANCE = 100.0;
-    private static final int MAX_SPAWN_ATTEMPTS = 50;
-
     private final SimulationProperties properties;
     private final VehicleRegistry vehicleRegistry;
 
@@ -56,6 +53,22 @@ public class VehicleSpawnerService {
             command.add("--initialDirectionDeg=" + random(0.0, 359.0));
             command.add("--initialSpeed=" + properties.getVehicle().getDefaultSpeed());
             command.add("--tickMillis=" + properties.getVehicle().getTickMillis());
+            command.add("--maxTurnDegPerTick=" + properties.getVehicle().getTuning().getMaxTurnDegPerTick());
+            command.add("--manualOverrideHoldMillis=" + properties.getVehicle().getTuning().getManualOverrideHoldMillis());
+            command.add("--aiTurnDeltaDeg=" + properties.getVehicle().getTuning().getAiTurnDeltaDeg());
+            command.add("--aiSlowDownFactor=" + properties.getVehicle().getTuning().getAiSlowDownFactor());
+            command.add("--aiRecoveryFactor=" + properties.getVehicle().getTuning().getAiRecoveryFactor());
+            command.add("--aiPredictionSteps=" + properties.getVehicle().getTuning().getAiPredictionSteps());
+            command.add("--aiPredictionStepSeconds=" + properties.getVehicle().getTuning().getAiPredictionStepSeconds());
+            command.add("--aiKeepCourseRiskThreshold=" + properties.getVehicle().getTuning().getAiKeepCourseRiskThreshold());
+            command.add("--safetyEmergencyMargin=" + properties.getVehicle().getTuning().getSafetyEmergencyMargin());
+            command.add("--safetyEmergencyLookaheadSeconds=" + properties.getVehicle().getTuning().getSafetyEmergencyLookaheadSeconds());
+            command.add("--safetyHardStopFactor=" + properties.getVehicle().getTuning().getSafetyHardStopFactor());
+            command.add("--safetySoftBrakeFactor=" + properties.getVehicle().getTuning().getSafetySoftBrakeFactor());
+            command.add("--safetySoftBrakeMinimumSpeed=" + properties.getVehicle().getTuning().getSafetySoftBrakeMinimumSpeed());
+            command.add("--stuckDistanceThreshold=" + properties.getVehicle().getTuning().getStuckDistanceThreshold());
+            command.add("--stuckTimeMillis=" + properties.getVehicle().getTuning().getStuckTimeMillis());
+            command.add("--stuckEscapeSpeedFactor=" + properties.getVehicle().getTuning().getStuckEscapeSpeedFactor());
 
             new ProcessBuilder(command)
                     .redirectErrorStream(true)
@@ -71,12 +84,12 @@ public class VehicleSpawnerService {
                 .collect(Collectors.toList());
 
         int attempts = 0;
-        while (attempts < MAX_SPAWN_ATTEMPTS) {
+        while (attempts < properties.getVehicle().getSpawnMaxAttempts()) {
             double x = random(50.0, properties.getWorld().getWidth() - 50.0);
             double y = random(50.0, properties.getWorld().getHeight() - 50.0);
 
             boolean tooClose = existingPositions.stream()
-                    .anyMatch(pos -> distance(x, y, pos.x, pos.y) < MIN_SPAWN_DISTANCE);
+                    .anyMatch(pos -> distance(x, y, pos.x, pos.y) < properties.getVehicle().getSpawnMinDistance());
 
             if (!tooClose) {
                 return new SpawnPosition(x, y);

@@ -10,8 +10,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class VehicleMotionEngine {
 
-    private static final double MAX_TURN_DEG_PER_TICK = 8.0;
-
     private final VehicleProcessConfig config;
     private final AtomicLong targetDirectionDegTimes100 = new AtomicLong(0L);
 
@@ -24,7 +22,7 @@ public class VehicleMotionEngine {
         double current = normalizeDirection(state.getDirectionDeg());
         double target = getTargetDirection();
         double delta = shortestSignedDeltaDeg(current, target);
-        double boundedDelta = Math.max(-MAX_TURN_DEG_PER_TICK, Math.min(MAX_TURN_DEG_PER_TICK, delta));
+        double boundedDelta = Math.max(-config.getMaxTurnDegPerTick(), Math.min(config.getMaxTurnDegPerTick(), delta));
         state.setDirectionDeg(normalizeDirection(current + boundedDelta));
     }
 

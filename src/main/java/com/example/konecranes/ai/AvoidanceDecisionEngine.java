@@ -11,9 +11,11 @@ import java.util.List;
 public class AvoidanceDecisionEngine {
 
     private final RiskEstimator riskEstimator;
+    private final double keepCourseRiskThreshold;
 
-    public AvoidanceDecisionEngine(RiskEstimator riskEstimator) {
+    public AvoidanceDecisionEngine(RiskEstimator riskEstimator, double keepCourseRiskThreshold) {
         this.riskEstimator = riskEstimator;
+        this.keepCourseRiskThreshold = keepCourseRiskThreshold;
     }
 
     public DecisionResult choose(VehicleState self, List<VehicleState> nearbyVehicles) {
@@ -31,7 +33,7 @@ public class AvoidanceDecisionEngine {
                 .orElseThrow(IllegalStateException::new);
 
         RiskAssessment current = riskEstimator.assess(self, nearbyVehicles);
-        AvoidanceAction action = current.getRiskScore() < 0.12 ? AvoidanceAction.KEEP_COURSE : best.getAction();
+        AvoidanceAction action = current.getRiskScore() < keepCourseRiskThreshold ? AvoidanceAction.KEEP_COURSE : best.getAction();
         return new DecisionResult(action, current.getRiskScore(), current.getRiskLevel());
     }
 

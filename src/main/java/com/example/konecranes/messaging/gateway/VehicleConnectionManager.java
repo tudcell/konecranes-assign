@@ -46,7 +46,7 @@ public class VehicleConnectionManager {
     private void send(String vehicleId, WireMessage message) throws IOException {
         BufferedWriter writer = writers.get(vehicleId);
         if (writer == null) {
-            return;
+            throw new IOException("No active connection for vehicle " + vehicleId);
         }
         synchronized (writer) {
             writer.write(objectMapper.writeValueAsString(message));

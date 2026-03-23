@@ -18,15 +18,16 @@ import java.util.function.DoubleSupplier;
  */
 public class VehicleControlPolicy {
 
-    private static final long MANUAL_OVERRIDE_HOLD_MILLIS = 2000L;
-
     private final VehicleProcessConfig config;
-    private final AvoidanceDecisionEngine decisionEngine = new AvoidanceDecisionEngine(new RiskEstimator(20, 0.1));
+    private final AvoidanceDecisionEngine decisionEngine;
     private final AtomicBoolean manualOverrideActive = new AtomicBoolean(false);
     private final AtomicLong manualOverrideUntilMillis = new AtomicLong(0L);
 
     public VehicleControlPolicy(VehicleProcessConfig config) {
         this.config = config;
+        this.decisionEngine = new AvoidanceDecisionEngine(
+                new RiskEstimator(config.getAiPredictionSteps(), config.getAiPredictionStepSeconds()),
+                config.getAiKeepCourseRiskThreshold());
     }
 
     public void applyControlCommand(ControlCommand command, VehicleState state, DoubleConsumer targetDirectionSetter) {
@@ -38,7 +39,7 @@ public class VehicleControlPolicy {
         }
         if (command.isManualOverride()) {
             manualOverrideActive.set(true);
-            manualOverrideUntilMillis.set(System.currentTimeMillis() + MANUAL_OVERRIDE_HOLD_MILLIS);
+            manualOverrideUntilMillis.set(System.currentTimeMillis() + config.getManualOverrideHoldMillis());
             state.setCurrentAction(AvoidanceAction.USER_OVERRIDE);
         }
     }
@@ -62,15 +63,15 @@ public class VehicleControlPolicy {
 
         switch (result.getAction()) {
             case TURN_LEFT:
-                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() - 8.0);
+                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() - config.getAiTurnDeltaDeg());
                 break;
             case TURN_RIGHT:
-                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() + 8.0);
+                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() + config.getAiTurnDeltaDeg());
                 break;
             case SLOW_DOWN:
                 // Only reduce speed if it's still above initial; don't compound reductions
                 if (current.getSpeed() > config.getInitialSpeed()) {
-                    current.setSpeed(Math.max(config.getInitialSpeed(), current.getSpeed() * 0.90));
+                    current.setSpeed(Math.max(config.getInitialSpeed(), current.getSpeed() * config.getAiSlowDownFactor()));
                 }
                 break;
             case EMERGENCY_STOP:
@@ -82,7 +83,7 @@ public class VehicleControlPolicy {
                     current.setSpeed(config.getInitialSpeed());
                 } else if (current.getSpeed() < config.getInitialSpeed()) {
                     // Gradually restore speed towards initial when no threat
-                    current.setSpeed(Math.min(config.getInitialSpeed(), current.getSpeed() * 1.08));
+                    current.setSpeed(Math.min(config.getInitialSpeed(), current.getSpeed() * config.getAiRecoveryFactor()));
                 }
                 current.setStatus(VehicleStatus.ACTIVE);
                 break;

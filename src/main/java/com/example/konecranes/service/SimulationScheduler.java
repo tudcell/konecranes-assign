@@ -18,12 +18,12 @@ public class SimulationScheduler {
         this.snapshotService = snapshotService;
     }
 
-    @Scheduled(fixedDelay = 150L)
+    @Scheduled(fixedDelayString = "${simulation.scheduler.fixedDelayMillis:150}")
     public void broadcastEnvironment() {
         environmentBroadcastService.broadcastToAll();
     }
 
-    @Scheduled(fixedDelay = 150L)
+    @Scheduled(fixedDelayString = "${simulation.scheduler.fixedDelayMillis:150}")
     public void publishSnapshot() {
         sseSnapshotService.publish(snapshotService.currentSnapshot());
     }

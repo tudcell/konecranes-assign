@@ -11,10 +11,11 @@ import java.util.function.DoubleConsumer;
  * Normal steering adjustments should be handled by the control/AI layer.
  */
 public class VehicleSafetyEngine {
+    private final VehicleProcessConfig config;
 
-    private static final double EMERGENCY_MARGIN = 3.0;
-    private static final double EMERGENCY_LOOKAHEAD_SECONDS = 0.08;
-    private static final double BRAKE_LOOKAHEAD_SECONDS = 0.15;
+    public VehicleSafetyEngine(VehicleProcessConfig config) {
+        this.config = config;
+    }
 
     public VehicleState findImmediateThreat(VehicleState state,
                                             Iterable<VehicleState> nearbyVehicles,
@@ -29,7 +30,7 @@ public class VehicleSafetyEngine {
             }
 
             double nowDistance = distance(state.getX(), state.getY(), other.getX(), other.getY());
-            double emergencyDistance = state.getRadius() + other.getRadius() + EMERGENCY_MARGIN;
+            double emergencyDistance = state.getRadius() + other.getRadius() + config.getSafetyEmergencyMargin();
 
             if (nowDistance < nearestDistance && isEmergencyLikely(state, other, nextX, nextY, emergencyDistance)) {
                 nearestDistance = nowDistance;
@@ -52,7 +53,7 @@ public class VehicleSafetyEngine {
         double escapeHeading = Math.toDegrees(Math.atan2(dy, dx));
 
         if (separation <= hardStopDistance) {
-            state.setSpeed(Math.max(0.0, state.getSpeed() * 0.25));
+            state.setSpeed(Math.max(0.0, state.getSpeed() * config.getSafetyHardStopFactor()));
             state.setStatus(VehicleStatus.STOPPED);
             state.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
             targetDirectionSetter.accept(escapeHeading);
@@ -60,7 +61,7 @@ public class VehicleSafetyEngine {
         }
 
         if (separation <= softBrakeDistance) {
-            state.setSpeed(Math.max(20.0, state.getSpeed() * 0.80));
+            state.setSpeed(Math.max(config.getSafetySoftBrakeMinimumSpeed(), state.getSpeed() * config.getSafetySoftBrakeFactor()));
             state.setStatus(VehicleStatus.ACTIVE);
             state.setCurrentAction(AvoidanceAction.SLOW_DOWN);
             targetDirectionSetter.accept(escapeHeading);
@@ -82,12 +83,12 @@ public class VehicleSafetyEngine {
         }
 
         double otherHeadingRad = Math.toRadians(other.getDirectionDeg());
-        double otherFutureX = other.getX() + Math.cos(otherHeadingRad) * other.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
-        double otherFutureY = other.getY() + Math.sin(otherHeadingRad) * other.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
+        double otherFutureX = other.getX() + Math.cos(otherHeadingRad) * other.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
+        double otherFutureY = other.getY() + Math.sin(otherHeadingRad) * other.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
 
         double selfHeadingRad = Math.toRadians(self.getDirectionDeg());
-        double selfFutureX = self.getX() + Math.cos(selfHeadingRad) * self.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
-        double selfFutureY = self.getY() + Math.sin(selfHeadingRad) * self.getSpeed() * EMERGENCY_LOOKAHEAD_SECONDS;
+        double selfFutureX = self.getX() + Math.cos(selfHeadingRad) * self.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
+        double selfFutureY = self.getY() + Math.sin(selfHeadingRad) * self.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
 
         return distance(selfFutureX, selfFutureY, otherFutureX, otherFutureY) <= emergencyDistance;
     }

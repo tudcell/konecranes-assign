@@ -19,9 +19,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class VehicleBehaviorEngine {
 
-    private static final double STUCK_DISTANCE_THRESHOLD = 1.0;
-    private static final long STUCK_TIME_MILLIS = 2000L;
-
     private final VehicleProcessConfig config;
     private final ConcurrentMap<String, VehicleState> nearbyVehicles = new ConcurrentHashMap<>();
     private final AtomicReference<VehicleState> selfState = new AtomicReference<>();
@@ -46,7 +43,7 @@ public class VehicleBehaviorEngine {
         selfState.set(initial);
         lastPositionSnapshot.set(new PositionSnapshot(initial.getX(), initial.getY(), System.currentTimeMillis()));
         this.motionEngine = new VehicleMotionEngine(config, initial.getDirectionDeg());
-        this.safetyEngine = new VehicleSafetyEngine();
+        this.safetyEngine = new VehicleSafetyEngine(config);
         this.controlPolicy = new VehicleControlPolicy(config);
     }
 
@@ -102,15 +99,15 @@ public class VehicleBehaviorEngine {
 
         // If vehicle hasn't moved much and has been stuck for too long, apply escape maneuver
         if (state.getStatus() == VehicleStatus.ACTIVE && 
-            timeDelta > STUCK_TIME_MILLIS && 
-            distance < STUCK_DISTANCE_THRESHOLD) {
+            timeDelta > config.getStuckTimeMillis() && 
+            distance < config.getStuckDistanceThreshold()) {
             // Reverse direction and boost speed to break deadlock
             state.setDirectionDeg(normalizeDirection(state.getDirectionDeg() + 180.0));
             motionEngine.setTargetDirection(state.getDirectionDeg());
-            state.setSpeed(config.getInitialSpeed() * 1.5);
+            state.setSpeed(config.getInitialSpeed() * config.getStuckEscapeSpeedFactor());
             state.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
             lastPositionSnapshot.set(new PositionSnapshot(state.getX(), state.getY(), now));
-        } else if (timeDelta > STUCK_TIME_MILLIS) {
+        } else if (timeDelta > config.getStuckTimeMillis()) {
             // Reset snapshot periodically to allow fresh stuck detection
             lastPositionSnapshot.set(new PositionSnapshot(state.getX(), state.getY(), now));
         }

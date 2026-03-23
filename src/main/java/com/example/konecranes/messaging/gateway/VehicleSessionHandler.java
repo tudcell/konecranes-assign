@@ -8,6 +8,8 @@ import com.example.konecranes.service.VehicleSessionService;
 import com.example.konecranes.service.VehicleUpdateService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -21,6 +23,8 @@ import java.util.Map;
 
 @Service
 public class VehicleSessionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(VehicleSessionHandler.class);
 
     private final ObjectMapper objectMapper;
     private final VehicleSessionService vehicleSessionService;
@@ -56,9 +60,12 @@ public class VehicleSessionHandler {
                     });
                     vehicleId = payload.get("vehicleId");
                     break;
+                } else {
+                    logger.debug("Ignoring unsupported message type {}", message.getType());
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException ex) {
+            logger.warn("Vehicle session I/O failed for {}", vehicleId == null ? "unknown" : vehicleId, ex);
         } finally {
             if (vehicleId != null) {
                 vehicleSessionService.disconnect(vehicleId);

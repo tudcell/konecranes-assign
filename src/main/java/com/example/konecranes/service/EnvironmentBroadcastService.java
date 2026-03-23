@@ -4,6 +4,8 @@ import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.gateway.VehicleConnectionManager;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.repository.VehicleRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -11,6 +13,8 @@ import java.util.List;
 
 @Service
 public class EnvironmentBroadcastService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EnvironmentBroadcastService.class);
 
     private final VehicleRegistry vehicleRegistry;
     private final VehicleConnectionManager connectionManager;
@@ -32,7 +36,8 @@ public class EnvironmentBroadcastService {
                     .collect(java.util.stream.Collectors.toList()));
             try {
                 connectionManager.sendEnvironment(self.getId(), update);
-            } catch (IOException ignored) {
+            } catch (IOException ex) {
+                logger.warn("Failed to send environment update to vehicle {}", self.getId(), ex);
             }
         }
     }

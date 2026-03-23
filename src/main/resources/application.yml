@@ -8,7 +8,28 @@ simulation:
   gateway:
     host: 127.0.0.1
     port: 9090
+  scheduler:
+    fixedDelayMillis: 150
   vehicle:
     jarPath: target/konecranes-ai-sim-1.0.0.jar
     defaultSpeed: 60.0
     tickMillis: 100
+    spawnMinDistance: 100.0
+    spawnMaxAttempts: 50
+    tuning:
+      maxTurnDegPerTick: 8.0
+      manualOverrideHoldMillis: 2000
+      aiTurnDeltaDeg: 8.0
+      aiSlowDownFactor: 0.90
+      aiRecoveryFactor: 1.08
+      aiPredictionSteps: 20
+      aiPredictionStepSeconds: 0.10
+      aiKeepCourseRiskThreshold: 0.12
+      safetyEmergencyMargin: 3.0
+      safetyEmergencyLookaheadSeconds: 0.08
+      safetyHardStopFactor: 0.25
+      safetySoftBrakeFactor: 0.80
+      safetySoftBrakeMinimumSpeed: 20.0
+      stuckDistanceThreshold: 1.0
+      stuckTimeMillis: 2000
+      stuckEscapeSpeedFactor: 1.5

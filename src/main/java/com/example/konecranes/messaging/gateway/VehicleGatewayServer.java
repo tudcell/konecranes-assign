@@ -1,6 +1,8 @@
 package com.example.konecranes.messaging.gateway;
 
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -12,6 +14,8 @@ import java.util.concurrent.Executors;
 
 @Component
 public class VehicleGatewayServer {
+
+    private static final Logger logger = LoggerFactory.getLogger(VehicleGatewayServer.class);
 
     private final VehicleSessionHandler sessionHandler;
     private final ExecutorService acceptorPool = Executors.newSingleThreadExecutor();
@@ -31,6 +35,7 @@ public class VehicleGatewayServer {
 
     @PostConstruct
     public void start() {
+        logger.info("Vehicle gateway started");
         acceptorPool.submit(() -> {
             while (running) {
                 try {
@@ -38,7 +43,7 @@ public class VehicleGatewayServer {
                     clientPool.submit(() -> sessionHandler.handle(clientSocket));
                 } catch (IOException ex) {
                     if (running) {
-                        throw new IllegalStateException("Gateway accept loop failed", ex);
+                        logger.error("Gateway accept loop failed", ex);
                     }
                 }
             }
@@ -51,6 +56,7 @@ public class VehicleGatewayServer {
         serverSocket.close();
         acceptorPool.shutdownNow();
         clientPool.shutdownNow();
+        logger.info("Vehicle gateway stopped");
     }
 }
 
