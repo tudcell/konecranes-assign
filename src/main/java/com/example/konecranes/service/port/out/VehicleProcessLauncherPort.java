@@ -4,6 +4,6 @@ import java.io.IOException;
 import java.util.List;
 
 public interface VehicleProcessLauncherPort {
-    void launch(List<String> command) throws IOException;
+    VehicleProcessHandle launch(List<String> command) throws IOException;
 }
 

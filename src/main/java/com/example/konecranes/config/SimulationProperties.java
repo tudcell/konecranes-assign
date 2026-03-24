@@ -88,6 +88,9 @@ public class SimulationProperties {
         private long tickMillis;
         private double spawnMinDistance = 100.0;
         private int spawnMaxAttempts = 50;
+        private int reconnectMaxAttempts = 8;
+        private long reconnectInitialBackoffMillis = 500L;
+        private long reconnectMaxBackoffMillis = 5000L;
         private final Tuning tuning = new Tuning();
 
         public String getJarPath() {
@@ -128,6 +131,30 @@ public class SimulationProperties {
 
         public void setSpawnMaxAttempts(int spawnMaxAttempts) {
             this.spawnMaxAttempts = spawnMaxAttempts;
+        }
+
+        public int getReconnectMaxAttempts() {
+            return reconnectMaxAttempts;
+        }
+
+        public void setReconnectMaxAttempts(int reconnectMaxAttempts) {
+            this.reconnectMaxAttempts = reconnectMaxAttempts;
+        }
+
+        public long getReconnectInitialBackoffMillis() {
+            return reconnectInitialBackoffMillis;
+        }
+
+        public void setReconnectInitialBackoffMillis(long reconnectInitialBackoffMillis) {
+            this.reconnectInitialBackoffMillis = reconnectInitialBackoffMillis;
+        }
+
+        public long getReconnectMaxBackoffMillis() {
+            return reconnectMaxBackoffMillis;
+        }
+
+        public void setReconnectMaxBackoffMillis(long reconnectMaxBackoffMillis) {
+            this.reconnectMaxBackoffMillis = reconnectMaxBackoffMillis;
         }
 
         public Tuning getTuning() {

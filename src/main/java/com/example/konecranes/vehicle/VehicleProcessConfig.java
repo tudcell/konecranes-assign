@@ -31,6 +31,9 @@ public class VehicleProcessConfig {
     private double stuckDistanceThreshold = 1.0;
     private long stuckTimeMillis = 2000L;
     private double stuckEscapeSpeedFactor = 1.5;
+    private int reconnectMaxAttempts = 8;
+    private long reconnectInitialBackoffMillis = 500L;
+    private long reconnectMaxBackoffMillis = 5000L;
 
     public static VehicleProcessConfig fromArgs(String[] args) {
         Map<String, String> values = new HashMap<>();
@@ -67,6 +70,9 @@ public class VehicleProcessConfig {
         config.stuckDistanceThreshold = Double.parseDouble(values.getOrDefault("stuckDistanceThreshold", "1.0"));
         config.stuckTimeMillis = Long.parseLong(values.getOrDefault("stuckTimeMillis", "2000"));
         config.stuckEscapeSpeedFactor = Double.parseDouble(values.getOrDefault("stuckEscapeSpeedFactor", "1.5"));
+        config.reconnectMaxAttempts = Integer.parseInt(values.getOrDefault("reconnectMaxAttempts", "8"));
+        config.reconnectInitialBackoffMillis = Long.parseLong(values.getOrDefault("reconnectInitialBackoffMillis", "500"));
+        config.reconnectMaxBackoffMillis = Long.parseLong(values.getOrDefault("reconnectMaxBackoffMillis", "5000"));
         return config;
     }
 
@@ -97,4 +103,7 @@ public class VehicleProcessConfig {
     public double getStuckDistanceThreshold() { return stuckDistanceThreshold; }
     public long getStuckTimeMillis() { return stuckTimeMillis; }
     public double getStuckEscapeSpeedFactor() { return stuckEscapeSpeedFactor; }
+    public int getReconnectMaxAttempts() { return reconnectMaxAttempts; }
+    public long getReconnectInitialBackoffMillis() { return reconnectInitialBackoffMillis; }
+    public long getReconnectMaxBackoffMillis() { return reconnectMaxBackoffMillis; }
 }

@@ -16,6 +16,9 @@ simulation:
     tickMillis: 100
     spawnMinDistance: 100.0
     spawnMaxAttempts: 50
+    reconnectMaxAttempts: 8
+    reconnectInitialBackoffMillis: 500
+    reconnectMaxBackoffMillis: 5000
     tuning:
       maxTurnDegPerTick: 8.0
       manualOverrideHoldMillis: 2000

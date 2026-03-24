@@ -46,22 +46,31 @@ public class VehicleSessionHandler {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                WireMessage message = objectMapper.readValue(line, WireMessage.class);
-                if (message.getType() == MessageType.REGISTER) {
-                    RegisterVehicleRequest request = objectMapper.convertValue(message.getPayload(), RegisterVehicleRequest.class);
-                    vehicleId = request.getVehicleId();
-                    vehicleSessionService.register(request, writer);
-                } else if (message.getType() == MessageType.STATE_UPDATE) {
-                    VehicleState state = objectMapper.convertValue(message.getPayload(), VehicleState.class);
-                    vehicleId = state.getId();
-                    vehicleUpdateService.updateState(state);
-                } else if (message.getType() == MessageType.DISCONNECT) {
-                    Map<String, String> payload = objectMapper.convertValue(message.getPayload(), new TypeReference<Map<String, String>>() {
-                    });
-                    vehicleId = payload.get("vehicleId");
-                    break;
-                } else {
-                    logger.debug("Ignoring unsupported message type {}", message.getType());
+                WireMessage message = null;
+                try {
+                    message = objectMapper.readValue(line, WireMessage.class);
+                    if (message.getType() == MessageType.REGISTER) {
+                        RegisterVehicleRequest request = objectMapper.convertValue(message.getPayload(), RegisterVehicleRequest.class);
+                        vehicleId = request.getVehicleId();
+                        vehicleSessionService.register(request, writer);
+                    } else if (message.getType() == MessageType.STATE_UPDATE) {
+                        VehicleState state = objectMapper.convertValue(message.getPayload(), VehicleState.class);
+                        vehicleId = state.getId();
+                        vehicleUpdateService.updateState(state);
+                    } else if (message.getType() == MessageType.DISCONNECT) {
+                        Map<String, String> payload = objectMapper.convertValue(message.getPayload(), new TypeReference<>() {
+                        });
+                        vehicleId = payload.get("vehicleId");
+                        break;
+                    } else {
+                        logger.debug("Ignoring unsupported message type {}", message.getType());
+                    }
+                } catch (Exception ex) {
+                    logger.warn("Ignoring invalid vehicle message for {} (type={}, payload={})",
+                            vehicleId == null ? "unknown" : vehicleId,
+                            message == null ? "unparseable" : String.valueOf(message.getType()),
+                            abbreviate(line),
+                            ex);
                 }
             }
         } catch (IOException ex) {
@@ -71,6 +80,18 @@ public class VehicleSessionHandler {
                 vehicleSessionService.disconnect(vehicleId);
             }
         }
+    }
+
+    private String abbreviate(String payload) {
+        if (payload == null) {
+            return "<null>";
+        }
+        String sanitized = payload.replace("\r", "").replace("\n", "");
+        int max = 180;
+        if (sanitized.length() <= max) {
+            return sanitized;
+        }
+        return sanitized.substring(0, max) + "...";
     }
 }
 
