@@ -55,17 +55,13 @@ public class VehicleProcessRuntime {
 
             long backoffMillis = computeBackoffMillis(reconnectAttempt);
             reconnectAttempt++;
-            logger.info("Vehicle {} reconnecting in {}ms (attempt {}/{})",
-                    config.getVehicleId(),
-                    backoffMillis,
-                    reconnectAttempt,
-                    config.getReconnectMaxAttempts());
-            try {
-                Thread.sleep(backoffMillis);
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
+            if (!sleepBeforeReconnect(backoffMillis)) {
                 return;
             }
+            logger.info("Vehicle {} reconnecting now (attempt {}/{})",
+                    config.getVehicleId(),
+                    reconnectAttempt,
+                    config.getReconnectMaxAttempts());
         }
     }
 
@@ -177,6 +173,16 @@ public class VehicleProcessRuntime {
             socket.close();
         } catch (IOException ignored) {
             // Best-effort close to unblock the reader when writer fails.
+        }
+    }
+
+    private boolean sleepBeforeReconnect(long backoffMillis) {
+        try {
+            Thread.sleep(backoffMillis);
+            return true;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 

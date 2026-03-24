@@ -1,5 +1,6 @@
 package com.example.konecranes.repository;
 
+import com.example.konecranes.adapter.out.persistence.VehicleRegistry;
 import com.example.konecranes.model.VehicleState;
 import org.junit.jupiter.api.Test;
 

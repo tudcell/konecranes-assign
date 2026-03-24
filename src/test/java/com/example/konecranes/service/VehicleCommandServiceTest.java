@@ -1,7 +1,8 @@
 package com.example.konecranes.service;
 
+import com.example.konecranes.application.VehicleCommandService;
+import com.example.konecranes.application.port.out.VehicleCommandGatewayPort;
 import com.example.konecranes.messaging.ControlCommand;
-import com.example.konecranes.service.port.out.VehicleGatewayPort;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -16,7 +17,7 @@ class VehicleCommandServiceTest {
 
     @Test
     void overrideDirectionBuildsManualControlCommand() throws IOException {
-        VehicleGatewayPort gatewayPort = mock(VehicleGatewayPort.class);
+        VehicleCommandGatewayPort gatewayPort = mock(VehicleCommandGatewayPort.class);
         VehicleCommandService service = new VehicleCommandService(gatewayPort);
 
         service.overrideDirection("VH-TEST", 180.0);
@@ -32,7 +33,7 @@ class VehicleCommandServiceTest {
 
     @Test
     void overrideSpeedBuildsManualControlCommand() throws IOException {
-        VehicleGatewayPort gatewayPort = mock(VehicleGatewayPort.class);
+        VehicleCommandGatewayPort gatewayPort = mock(VehicleCommandGatewayPort.class);
         VehicleCommandService service = new VehicleCommandService(gatewayPort);
 
         service.overrideSpeed("VH-TEST", 25.0);

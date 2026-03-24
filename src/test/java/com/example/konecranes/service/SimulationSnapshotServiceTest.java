@@ -1,10 +1,11 @@
 package com.example.konecranes.service;
 
+import com.example.konecranes.application.SimulationSnapshotService;
+import com.example.konecranes.application.port.out.VehicleStateStore;
 import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.SimulationSnapshot;
 import com.example.konecranes.model.VehicleState;
-import com.example.konecranes.service.port.out.VehicleStateStore;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

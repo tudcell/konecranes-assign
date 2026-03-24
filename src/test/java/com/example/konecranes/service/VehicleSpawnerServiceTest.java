@@ -1,9 +1,10 @@
 package com.example.konecranes.service;
 
+import com.example.konecranes.application.VehicleSpawnerService;
+import com.example.konecranes.application.port.out.VehicleProcessHandle;
+import com.example.konecranes.application.port.out.VehicleProcessLauncherPort;
+import com.example.konecranes.application.port.out.VehicleStateStore;
 import com.example.konecranes.config.SimulationProperties;
-import com.example.konecranes.service.port.out.VehicleProcessHandle;
-import com.example.konecranes.service.port.out.VehicleProcessLauncherPort;
-import com.example.konecranes.service.port.out.VehicleStateStore;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
