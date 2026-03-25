@@ -2,6 +2,7 @@ package com.example.konecranes.messaging;
 
 import com.example.konecranes.model.MessageType;
 
+
 public class WireMessage {
     private MessageType type;
     private Object payload;

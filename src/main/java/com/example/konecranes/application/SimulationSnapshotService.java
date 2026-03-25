@@ -5,6 +5,7 @@ import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.SimulationSnapshot;
 import com.example.konecranes.model.SimulationWorld;
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.model.VehicleStatus;
 import com.example.konecranes.application.port.in.SimulationQueryUseCase;
 import com.example.konecranes.application.port.out.VehicleStateStore;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,9 @@ public class SimulationSnapshotService implements SimulationQueryUseCase {
 
     @Override
     public SimulationSnapshot currentSnapshot() {
-        List<VehicleState> vehicles = vehicleStateStore.findAll();
+        List<VehicleState> vehicles = vehicleStateStore.findAll().stream()
+                .filter(vehicle -> vehicle.getStatus() == VehicleStatus.ACTIVE)
+                .collect(java.util.stream.Collectors.toList());
         SimulationSnapshot snapshot = new SimulationSnapshot();
         snapshot.setGeneratedAt(System.currentTimeMillis());
         snapshot.setVehicles(vehicles);

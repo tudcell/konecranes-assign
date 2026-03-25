@@ -6,6 +6,7 @@ import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.SimulationSnapshot;
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.model.VehicleStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -24,12 +25,19 @@ class SimulationSnapshotServiceTest {
         VehicleState highRisk = new VehicleState();
         highRisk.setId("VH-HIGH");
         highRisk.setRiskLevel(RiskLevel.HIGH);
+        highRisk.setStatus(VehicleStatus.ACTIVE);
 
         VehicleState lowRisk = new VehicleState();
         lowRisk.setId("VH-LOW");
         lowRisk.setRiskLevel(RiskLevel.LOW);
+        lowRisk.setStatus(VehicleStatus.ACTIVE);
 
-        when(stateStore.findAll()).thenReturn(Arrays.asList(highRisk, lowRisk));
+        VehicleState disconnected = new VehicleState();
+        disconnected.setId("VH-DISCONNECTED");
+        disconnected.setRiskLevel(RiskLevel.HIGH);
+        disconnected.setStatus(VehicleStatus.DISCONNECTED);
+
+        when(stateStore.findAll()).thenReturn(Arrays.asList(highRisk, lowRisk, disconnected));
 
         SimulationProperties properties = new SimulationProperties();
         properties.getWorld().setWidth(1000.0);

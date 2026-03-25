@@ -85,8 +85,8 @@ public class VehicleSessionHandler {
             }
         } finally {
             if (vehicleId != null) {
-                sessionConnectionRegistry.detach(vehicleId);
                 disconnectVehicleSessionUseCase.disconnect(new DisconnectVehicleSessionCommand(vehicleId));
+                sessionConnectionRegistry.detach(vehicleId);
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.konecranes.application;
 
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.model.VehicleStatus;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleStateStore;
 import org.slf4j.Logger;
@@ -26,11 +27,14 @@ public class EnvironmentBroadcastService {
     }
 
     public void broadcastToAll() {
-        List<VehicleState> allVehicles = vehicleStateStore.findAll();
-        for (VehicleState self : allVehicles) {
+        List<VehicleState> activeVehicles = vehicleStateStore.findAll().stream()
+                .filter(vehicle -> vehicle.getStatus() == VehicleStatus.ACTIVE)
+                .collect(java.util.stream.Collectors.toList());
+
+        for (VehicleState self : activeVehicles) {
             EnvironmentUpdate update = new EnvironmentUpdate();
             update.setTimestamp(System.currentTimeMillis());
-            update.setNearbyVehicles(allVehicles.stream()
+            update.setNearbyVehicles(activeVehicles.stream()
                     .filter(v -> !v.getId().equals(self.getId()))
                     .map(VehicleState::copy)
                     .collect(java.util.stream.Collectors.toList()));

@@ -2,6 +2,8 @@ const canvas = document.getElementById('simCanvas');
 const ctx = canvas.getContext('2d');
 const vehicleSelect = document.getElementById('vehicleSelect');
 let snapshot = { vehicles: [], world: { width: 1000, height: 700 }, collisionWarnings: 0 };
+let selectedVehicleId = '';
+let lastVehicleIdsKey = '';
 
 async function fetchSnapshot() {
     const response = await fetch('/api/simulation/snapshot');
@@ -78,17 +80,40 @@ function drawVehicle(vehicle) {
 }
 
 function syncVehicleOptions() {
-    const selected = vehicleSelect.value;
-    vehicleSelect.innerHTML = '';
-    snapshot.vehicles.forEach(vehicle => {
-        const option = document.createElement('option');
-        option.value = vehicle.id;
-        option.textContent = vehicle.id;
-        vehicleSelect.appendChild(option);
-    });
-    if (snapshot.vehicles.some(vehicle => vehicle.id === selected)) {
-        vehicleSelect.value = selected;
+    const activeIds = snapshot.vehicles
+        .filter(vehicle => vehicle.status !== 'DISCONNECTED')
+        .map(vehicle => vehicle.id)
+        .sort();
+    const currentIdsKey = activeIds.join('|');
+
+    // Do not mutate the select while the user is choosing an option.
+    if (document.activeElement === vehicleSelect) {
+        return;
     }
+
+    if (currentIdsKey !== lastVehicleIdsKey) {
+        vehicleSelect.innerHTML = '';
+        activeIds.forEach(id => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = id;
+            vehicleSelect.appendChild(option);
+        });
+        lastVehicleIdsKey = currentIdsKey;
+    }
+
+    if (selectedVehicleId && activeIds.includes(selectedVehicleId)) {
+        vehicleSelect.value = selectedVehicleId;
+        return;
+    }
+
+    if (activeIds.length > 0) {
+        vehicleSelect.value = activeIds[0];
+        selectedVehicleId = activeIds[0];
+        return;
+    }
+
+    selectedVehicleId = '';
 }
 
 async function spawnVehicles() {
@@ -102,6 +127,9 @@ async function spawnVehicles() {
 
 async function sendDirection() {
     const vehicleId = vehicleSelect.value;
+    if (!vehicleId) {
+        return;
+    }
     const directionDeg = Number(document.getElementById('directionInput').value);
     await fetch(`/api/vehicles/${vehicleId}/direction`, {
         method: 'POST',
@@ -112,6 +140,9 @@ async function sendDirection() {
 
 async function sendSpeed() {
     const vehicleId = vehicleSelect.value;
+    if (!vehicleId) {
+        return;
+    }
     const speed = Number(document.getElementById('speedInput').value);
     await fetch(`/api/vehicles/${vehicleId}/speed`, {
         method: 'POST',
@@ -123,6 +154,12 @@ async function sendSpeed() {
 document.getElementById('spawnButton').addEventListener('click', spawnVehicles);
 document.getElementById('directionButton').addEventListener('click', sendDirection);
 document.getElementById('speedButton').addEventListener('click', sendSpeed);
+vehicleSelect.addEventListener('change', () => {
+    selectedVehicleId = vehicleSelect.value || '';
+});
+vehicleSelect.addEventListener('focus', () => {
+    selectedVehicleId = vehicleSelect.value || selectedVehicleId;
+});
 
 fetchSnapshot();
 connectStream();
