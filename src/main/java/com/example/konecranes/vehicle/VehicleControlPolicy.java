@@ -31,6 +31,9 @@ public class VehicleControlPolicy {
     }
 
     public void applyControlCommand(ControlCommand command, VehicleState state, DoubleConsumer targetDirectionSetter) {
+        if (command == null) {
+            return;
+        }
         if (command.getOverrideDirectionDeg() != null) {
             targetDirectionSetter.accept(command.getOverrideDirectionDeg());
         }

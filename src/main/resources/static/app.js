@@ -118,37 +118,71 @@ function syncVehicleOptions() {
 
 async function spawnVehicles() {
     const count = Number(document.getElementById('spawnCount').value);
-    await fetch('/api/vehicles/spawn', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count })
-    });
+    try {
+        const response = await fetch('/api/vehicles/spawn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ count })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            alert(`Error: ${error.message || 'Failed to spawn vehicles'}`);
+        }
+    } catch (ex) {
+        alert(`Connection error: ${ex.message}`);
+    }
 }
 
 async function sendDirection() {
     const vehicleId = vehicleSelect.value;
     if (!vehicleId) {
+        alert('No vehicle selected');
         return;
     }
     const directionDeg = Number(document.getElementById('directionInput').value);
-    await fetch(`/api/vehicles/${vehicleId}/direction`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directionDeg })
-    });
+    if (isNaN(directionDeg) || directionDeg < 0 || directionDeg > 359) {
+        alert('Direction must be between 0 and 359 degrees');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/vehicles/${vehicleId}/direction`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ directionDeg })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            alert(`Error: ${error.message || 'Failed to set direction'}`);
+        }
+    } catch (ex) {
+        alert(`Connection error: ${ex.message}`);
+    }
 }
 
 async function sendSpeed() {
     const vehicleId = vehicleSelect.value;
     if (!vehicleId) {
+        alert('No vehicle selected');
         return;
     }
     const speed = Number(document.getElementById('speedInput').value);
-    await fetch(`/api/vehicles/${vehicleId}/speed`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed })
-    });
+    if (isNaN(speed) || speed < 0) {
+        alert('Speed must be a non-negative number');
+        return;
+    }
+    try {
+        const response = await fetch(`/api/vehicles/${vehicleId}/speed`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ speed })
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            alert(`Error: ${error.message || 'Failed to set speed'}`);
+        }
+    } catch (ex) {
+        alert(`Connection error: ${ex.message}`);
+    }
 }
 
 document.getElementById('spawnButton').addEventListener('click', spawnVehicles);

@@ -1,7 +1,14 @@
 server:
   port: 8080
 
+spring:
+  mvc:
+    async:
+      request-timeout: 1800000  # 30 minutes - prevents Spring from killing long-lived SSE connections
+
 simulation:
+  sse:
+    emitter-timeout-millis: 0  # 0 = never timeout (connection lives until client closes)
   world:
     width: 1000
     height: 700

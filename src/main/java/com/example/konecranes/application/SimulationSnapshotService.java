@@ -26,7 +26,7 @@ public class SimulationSnapshotService implements SimulationQueryUseCase {
     @Override
     public SimulationSnapshot currentSnapshot() {
         List<VehicleState> vehicles = vehicleStateStore.findAll().stream()
-                .filter(vehicle -> vehicle.getStatus() == VehicleStatus.ACTIVE)
+                .filter(vehicle -> vehicle.getStatus() != VehicleStatus.DISCONNECTED)
                 .collect(java.util.stream.Collectors.toList());
         SimulationSnapshot snapshot = new SimulationSnapshot();
         snapshot.setGeneratedAt(System.currentTimeMillis());

@@ -14,7 +14,7 @@ public class VehicleProcessConfig {
     private double initialDirectionDeg;
     private double initialSpeed;
     private long tickMillis;
-    private double radius = 16.0;
+    private final double radius = 16.0;
     private double maxTurnDegPerTick = 8.0;
     private long manualOverrideHoldMillis = 2000L;
     private double aiTurnDeltaDeg = 8.0;
@@ -44,7 +44,11 @@ public class VehicleProcessConfig {
             }
         }
         VehicleProcessConfig config = new VehicleProcessConfig();
-        config.vehicleId = values.get("vehicleId");
+        String vehicleId = values.get("vehicleId");
+        if (vehicleId == null || vehicleId.trim().isEmpty()) {
+            throw new IllegalArgumentException("vehicleId is required");
+        }
+        config.vehicleId = vehicleId;
         config.gatewayHost = values.getOrDefault("gatewayHost", "127.0.0.1");
         config.gatewayPort = Integer.parseInt(values.getOrDefault("gatewayPort", "9090"));
         config.worldWidth = Double.parseDouble(values.getOrDefault("worldWidth", "1000"));

@@ -40,8 +40,9 @@ public class SseSnapshotService implements SimulationStreamUseCase, SimulationSn
             try {
                 entry.getValue().onSnapshot(snapshot);
             } catch (Exception ex) {
+                // Defer removal to avoid ConcurrentModificationException
                 listeners.remove(entry.getKey());
-                logger.debug("Removed failed stream subscriber {}", entry.getKey(), ex);
+                logger.warn("Removed failed stream subscriber {} due to: {}", entry.getKey(), ex.getMessage());
             }
         }
     }

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,7 +54,8 @@ public class VehicleConnectionManager implements VehicleRegistrationGatewayPort,
 
     @Override
     public void detachAll() {
-        for (String vehicleId : writers.keySet()) {
+        // Create a copy to avoid ConcurrentModificationException
+        for (String vehicleId : new ArrayList<>(writers.keySet())) {
             detach(vehicleId);
         }
     }

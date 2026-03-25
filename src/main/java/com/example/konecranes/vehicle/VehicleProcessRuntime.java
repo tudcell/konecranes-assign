@@ -80,8 +80,9 @@ public class VehicleProcessRuntime {
             writerThread.setDaemon(true);
             writerThread.start();
 
+            long aiTickMillis = config.getTickMillis() > 0 ? Math.max(config.getTickMillis(), 50L) : 150L;
             executor.scheduleAtFixedRate(behaviorEngine::movementTick, 0L, config.getTickMillis(), TimeUnit.MILLISECONDS);
-            executor.scheduleAtFixedRate(behaviorEngine::aiTick, 0L, 150L, TimeUnit.MILLISECONDS);
+            executor.scheduleAtFixedRate(behaviorEngine::aiTick, 0L, aiTickMillis, TimeUnit.MILLISECONDS);
             executor.scheduleAtFixedRate(this::publishState, 0L, config.getTickMillis(), TimeUnit.MILLISECONDS);
 
             String line;

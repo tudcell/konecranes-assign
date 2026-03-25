@@ -14,6 +14,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.DecimalMax;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
@@ -75,6 +76,8 @@ public class VehicleController {
 
     public static class DirectionCommand {
         @NotNull
+        @DecimalMin("0.0")
+        @DecimalMax("359.99")
         private Double directionDeg;
 
         public Double getDirectionDeg() { return directionDeg; }

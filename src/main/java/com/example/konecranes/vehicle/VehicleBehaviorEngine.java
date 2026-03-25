@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -67,7 +66,9 @@ public class VehicleBehaviorEngine {
         double nextX = state.getX() + Math.cos(directionRad) * state.getSpeed() * dtSeconds;
         double nextY = state.getY() + Math.sin(directionRad) * state.getSpeed() * dtSeconds;
 
-        VehicleState threat = safetyEngine.findImmediateThreat(state, nearbyVehicles.values(), nextX, nextY);
+        // Check nearby vehicles for immediate threats (defensive copy prevents concurrent modification)
+        List<VehicleState> nearby = new ArrayList<>(nearbyVehicles.values());
+        VehicleState threat = safetyEngine.findImmediateThreat(state, nearby, nextX, nextY);
         if (threat != null) {
             safetyEngine.applyEmergencyManeuver(state, threat, motionEngine::setTargetDirection);
             motionEngine.bounceIfNeeded(state);
