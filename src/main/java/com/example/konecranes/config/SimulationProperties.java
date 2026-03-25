@@ -3,6 +3,9 @@ package com.example.konecranes.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+/**
+ * Binds coordinator and vehicle runtime settings from the {@code simulation.*} namespace.
+ */
 @Component
 @ConfigurationProperties(prefix = "simulation")
 public class SimulationProperties {
@@ -28,6 +31,9 @@ public class SimulationProperties {
         return vehicle;
     }
 
+    /**
+     * World size configuration.
+     */
     public static class World {
         private double width;
         private double height;
@@ -49,6 +55,9 @@ public class SimulationProperties {
         }
     }
 
+    /**
+     * TCP gateway host/port configuration.
+     */
     public static class Gateway {
         private String host;
         private int port;
@@ -70,6 +79,9 @@ public class SimulationProperties {
         }
     }
 
+    /**
+     * Scheduler cadence configuration.
+     */
     public static class Scheduler {
         private long fixedDelayMillis = 150L;
 
@@ -82,6 +94,9 @@ public class SimulationProperties {
         }
     }
 
+    /**
+     * Vehicle process defaults and reconnect/spawn settings.
+     */
     public static class Vehicle {
         private String jarPath;
         private double defaultSpeed;
@@ -162,6 +177,9 @@ public class SimulationProperties {
         }
     }
 
+    /**
+     * Fine-grained AI, motion, and safety tuning values.
+     */
     public static class Tuning {
         private double maxTurnDegPerTick = 8.0;
         private long manualOverrideHoldMillis = 2000L;

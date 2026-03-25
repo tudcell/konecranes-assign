@@ -1,10 +1,10 @@
 package com.example.konecranes.application;
 
-import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.application.port.in.VehicleSpawnUseCase;
 import com.example.konecranes.application.port.out.VehicleProcessHandle;
 import com.example.konecranes.application.port.out.VehicleProcessLauncherPort;
 import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.config.SimulationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -21,6 +21,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+/**
+ * Application service that spawns and owns vehicle child processes.
+ */
 @Service
 public class VehicleSpawnerService implements VehicleSpawnUseCase {
 
@@ -40,6 +43,13 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
         this.processLauncher = processLauncher;
     }
 
+    /**
+     * Spawns the requested number of vehicle processes.
+     *
+     * @param count number of vehicles to create
+     * @return list of created vehicle ids
+     * @throws IOException when jar is missing or process launch fails
+     */
     @Override
     public List<String> spawn(int count) throws IOException {
         Path jarPath = Path.of(properties.getVehicle().getJarPath()).toAbsolutePath();
@@ -51,7 +61,7 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
         for (int i = 0; i < count; i++) {
             String vehicleId = "VH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-            // Find a safe spawn position away from existing vehicles
+            // Find a safe spawn position away from existing vehicles.
             SpawnPosition position = findSafeSpawnPosition();
 
             List<String> command = new ArrayList<>();
@@ -96,6 +106,9 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
         return ids;
     }
 
+    /**
+     * Stops all spawned child processes during coordinator shutdown.
+     */
     @PreDestroy
     public void stopSpawnedVehicles() {
         for (Map.Entry<String, VehicleProcessHandle> entry : spawnedProcesses.entrySet()) {
@@ -118,6 +131,11 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
         spawnedProcesses.clear();
     }
 
+    /**
+     * Finds a spawn location that is not too close to existing vehicles.
+     *
+     * @return selected spawn position
+     */
     private SpawnPosition findSafeSpawnPosition() {
         List<SpawnPosition> existingPositions = vehicleStateStore.findAll().stream()
                 .map(v -> new SpawnPosition(v.getX(), v.getY()))
@@ -137,7 +155,7 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
             attempts++;
         }
 
-        // Fallback: return random position if no safe spot found after max attempts
+        // Fallback: return random position if no safe spot found after max attempts.
         return new SpawnPosition(random(50.0, properties.getWorld().getWidth() - 50.0),
                 random(50.0, properties.getWorld().getHeight() - 50.0));
     }

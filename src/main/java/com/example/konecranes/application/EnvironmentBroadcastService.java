@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Application service that broadcasts per-vehicle environment snapshots.
+ */
 @Service
 public class EnvironmentBroadcastService {
 
@@ -26,6 +29,9 @@ public class EnvironmentBroadcastService {
         this.environmentGatewayPort = environmentGatewayPort;
     }
 
+    /**
+     * Sends current nearby-vehicle context to each active vehicle.
+     */
     public void broadcastToAll() {
         List<VehicleState> activeVehicles = vehicleStateStore.findAll().stream()
                 .filter(vehicle -> vehicle.getStatus() == VehicleStatus.ACTIVE)

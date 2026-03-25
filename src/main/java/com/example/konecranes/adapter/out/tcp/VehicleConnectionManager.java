@@ -19,6 +19,9 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Outbound TCP adapter that stores active vehicle writers and sends wire messages.
+ */
 @Service
 public class VehicleConnectionManager implements VehicleRegistrationGatewayPort,
         VehicleEnvironmentGatewayPort,
@@ -34,11 +37,17 @@ public class VehicleConnectionManager implements VehicleRegistrationGatewayPort,
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Registers a writer for one active vehicle session.
+     */
     @Override
     public void attach(String vehicleId, BufferedWriter writer) {
         writers.put(vehicleId, writer);
     }
 
+    /**
+     * Removes and closes a writer for one vehicle session.
+     */
     @Override
     public void detach(String vehicleId) {
         BufferedWriter writer = writers.remove(vehicleId);
@@ -52,6 +61,9 @@ public class VehicleConnectionManager implements VehicleRegistrationGatewayPort,
         }
     }
 
+    /**
+     * Detaches all active vehicle writers simultaneously.
+     */
     @Override
     public void detachAll() {
         // Create a copy to avoid ConcurrentModificationException
@@ -60,21 +72,37 @@ public class VehicleConnectionManager implements VehicleRegistrationGatewayPort,
         }
     }
 
+    /**
+     * Sends registration acknowledgement to one vehicle process.
+     */
     @Override
     public void sendAck(String vehicleId, RegisterVehicleAck ack) throws IOException {
         send(vehicleId, new WireMessage(MessageType.REGISTER_ACK, ack));
     }
 
+    /**
+     * Sends environment update to one vehicle process.
+     */
     @Override
     public void sendEnvironment(String vehicleId, EnvironmentUpdate update) throws IOException {
         send(vehicleId, new WireMessage(MessageType.ENVIRONMENT_UPDATE, update));
     }
 
+    /**
+     * Sends manual control command to one vehicle process.
+     */
     @Override
     public void sendControlCommand(String vehicleId, ControlCommand command) throws IOException {
         send(vehicleId, new WireMessage(MessageType.CONTROL_COMMAND, command));
     }
 
+    /**
+     * Sends a wire message to one vehicle via its registered writer.
+     *
+     * @param vehicleId target vehicle id
+     * @param message wire message to send
+     * @throws IOException when vehicle writer is not registered or send fails
+     */
     private void send(String vehicleId, WireMessage message) throws IOException {
         BufferedWriter writer = writers.get(vehicleId);
         if (writer == null) {

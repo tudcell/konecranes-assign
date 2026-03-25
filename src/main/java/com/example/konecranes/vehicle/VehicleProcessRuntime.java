@@ -25,6 +25,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Runtime loop for a spawned vehicle process.
+ *
+ * <p>Responsibilities include TCP session lifecycle, periodic AI/movement ticks,
+ * outbound state publishing, and bounded reconnect attempts.</p>
+ */
 public class VehicleProcessRuntime {
 
     private static final Logger logger = LoggerFactory.getLogger(VehicleProcessRuntime.class);
@@ -39,6 +45,9 @@ public class VehicleProcessRuntime {
         this.behaviorEngine = new VehicleBehaviorEngine(config);
     }
 
+    /**
+     * Starts the runtime loop and keeps reconnecting until limits are reached.
+     */
     public void start() {
         int reconnectAttempt = 0;
         while (!Thread.currentThread().isInterrupted()) {
@@ -65,6 +74,11 @@ public class VehicleProcessRuntime {
         }
     }
 
+    /**
+     * Runs one full socket session from connect until disconnect.
+     *
+     * @return session outcome used by reconnect policy
+     */
     private SessionOutcome runSingleSession() {
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(3);
         Thread writerThread = null;
@@ -112,6 +126,9 @@ public class VehicleProcessRuntime {
         }
     }
 
+    /**
+     * Enqueues REGISTER message sent as the first packet on a new connection.
+     */
     private void register() {
         RegisterVehicleRequest request = new RegisterVehicleRequest();
         request.setVehicleId(config.getVehicleId());
@@ -123,6 +140,14 @@ public class VehicleProcessRuntime {
         outboundQueue.add(new WireMessage(MessageType.REGISTER, request));
     }
 
+    /**
+     * Writes outbound messages from queue to socket until shutdown.
+     *
+     * @param writer socket writer
+     * @param socket socket to close on writer failure
+     * @param running shared runtime flag
+     * @param writerFailure holder for first writer exception
+     */
     private void writerLoop(BufferedWriter writer,
                             Socket socket,
                             AtomicBoolean running,
@@ -146,6 +171,12 @@ public class VehicleProcessRuntime {
         }
     }
 
+    /**
+     * Parses one inbound wire line and dispatches it to behavior engine.
+     *
+     * @param line JSON wire message
+     * @throws IOException when JSON parsing fails
+     */
     private void handleIncoming(String line) throws IOException {
         WireMessage message = objectMapper.readValue(line, WireMessage.class);
         if (message.getType() == MessageType.ENVIRONMENT_UPDATE) {
@@ -157,10 +188,19 @@ public class VehicleProcessRuntime {
         }
     }
 
+    /**
+     * Enqueues one STATE_UPDATE payload from current behavior state.
+     */
     private void publishState() {
         outboundQueue.add(new WireMessage(MessageType.STATE_UPDATE, behaviorEngine.currentStateCopy()));
     }
 
+    /**
+     * Computes exponential reconnect backoff clamped by configuration.
+     *
+     * @param reconnectAttempt zero-based reconnect attempt
+     * @return wait time in milliseconds
+     */
     private long computeBackoffMillis(int reconnectAttempt) {
         long initial = Math.max(1L, config.getReconnectInitialBackoffMillis());
         long max = Math.max(initial, config.getReconnectMaxBackoffMillis());

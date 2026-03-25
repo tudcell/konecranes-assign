@@ -1,12 +1,15 @@
 package com.example.konecranes.application;
 
-import com.example.konecranes.messaging.ControlCommand;
 import com.example.konecranes.application.port.in.VehicleControlUseCase;
 import com.example.konecranes.application.port.out.VehicleCommandGatewayPort;
+import com.example.konecranes.messaging.ControlCommand;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 
+/**
+ * Application service that maps manual control use cases to gateway commands.
+ */
 @Service
 public class VehicleCommandService implements VehicleControlUseCase {
 
@@ -16,6 +19,9 @@ public class VehicleCommandService implements VehicleControlUseCase {
         this.commandGatewayPort = commandGatewayPort;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void overrideDirection(String vehicleId, double directionDeg) throws IOException {
         ControlCommand command = new ControlCommand();
@@ -25,6 +31,9 @@ public class VehicleCommandService implements VehicleControlUseCase {
         commandGatewayPort.sendControlCommand(vehicleId, command);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void overrideSpeed(String vehicleId, double speed) throws IOException {
         ControlCommand command = new ControlCommand();
@@ -34,4 +43,3 @@ public class VehicleCommandService implements VehicleControlUseCase {
         commandGatewayPort.sendControlCommand(vehicleId, command);
     }
 }
-

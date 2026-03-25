@@ -10,22 +10,36 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * In-memory persistence adapter for vehicle states.
+ *
+ * <p>All reads and writes use defensive copies to avoid shared mutable state.</p>
+ */
 @Repository
 public class VehicleRegistry implements VehicleStateStore {
 
     private final Map<String, VehicleState> vehicles = new ConcurrentHashMap<>();
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void upsert(VehicleState state) {
         vehicles.put(state.getId(), state.copy());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Optional<VehicleState> findById(String vehicleId) {
         VehicleState state = vehicles.get(vehicleId);
         return Optional.ofNullable(state == null ? null : state.copy());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<VehicleState> findAll() {
         List<VehicleState> snapshot = new ArrayList<>();
@@ -35,6 +49,9 @@ public class VehicleRegistry implements VehicleStateStore {
         return snapshot;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<VehicleState> findAllExcept(String vehicleId) {
         List<VehicleState> snapshot = new ArrayList<>();
@@ -46,6 +63,9 @@ public class VehicleRegistry implements VehicleStateStore {
         return snapshot;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void remove(String vehicleId) {
         vehicles.remove(vehicleId);

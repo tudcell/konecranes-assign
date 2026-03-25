@@ -3,6 +3,11 @@ package com.example.konecranes.vehicle;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Immutable-at-runtime configuration for a spawned vehicle process.
+ *
+ * <p>Values are parsed from command line arguments provided by the coordinator.</p>
+ */
 public class VehicleProcessConfig {
     private String vehicleId;
     private String gatewayHost;
@@ -35,6 +40,12 @@ public class VehicleProcessConfig {
     private long reconnectInitialBackoffMillis = 500L;
     private long reconnectMaxBackoffMillis = 5000L;
 
+    /**
+     * Parses command line arguments into a vehicle process configuration.
+     *
+     * @param args process arguments in --key=value form
+     * @return parsed config object
+     */
     public static VehicleProcessConfig fromArgs(String[] args) {
         Map<String, String> values = new HashMap<>();
         for (String arg : args) {
@@ -80,34 +91,64 @@ public class VehicleProcessConfig {
         return config;
     }
 
+    /** @return vehicle identifier */
     public String getVehicleId() { return vehicleId; }
+    /** @return gateway host for TCP connection */
     public String getGatewayHost() { return gatewayHost; }
+    /** @return gateway port for TCP connection */
     public int getGatewayPort() { return gatewayPort; }
+    /** @return simulation world width */
     public double getWorldWidth() { return worldWidth; }
+    /** @return simulation world height */
     public double getWorldHeight() { return worldHeight; }
+    /** @return initial X coordinate */
     public double getInitialX() { return initialX; }
+    /** @return initial Y coordinate */
     public double getInitialY() { return initialY; }
+    /** @return initial heading in degrees */
     public double getInitialDirectionDeg() { return initialDirectionDeg; }
+    /** @return initial speed */
     public double getInitialSpeed() { return initialSpeed; }
+    /** @return movement tick interval in milliseconds */
     public long getTickMillis() { return tickMillis; }
+    /** @return collision radius (fixed at 16.0 units) */
     public double getRadius() { return radius; }
+    /** @return maximum turn degrees per tick */
     public double getMaxTurnDegPerTick() { return maxTurnDegPerTick; }
+    /** @return manual override hold duration in milliseconds */
     public long getManualOverrideHoldMillis() { return manualOverrideHoldMillis; }
+    /** @return AI turn delta in degrees for steering decisions */
     public double getAiTurnDeltaDeg() { return aiTurnDeltaDeg; }
+    /** @return AI slow-down speed multiplier */
     public double getAiSlowDownFactor() { return aiSlowDownFactor; }
+    /** @return AI speed recovery multiplier */
     public double getAiRecoveryFactor() { return aiRecoveryFactor; }
+    /** @return AI prediction steps for lookahead */
     public int getAiPredictionSteps() { return aiPredictionSteps; }
+    /** @return AI prediction time per step in seconds */
     public double getAiPredictionStepSeconds() { return aiPredictionStepSeconds; }
+    /** @return AI threshold below which to keep course */
     public double getAiKeepCourseRiskThreshold() { return aiKeepCourseRiskThreshold; }
+    /** @return safety emergency guard margin in units */
     public double getSafetyEmergencyMargin() { return safetyEmergencyMargin; }
+    /** @return safety collision lookahead in seconds */
     public double getSafetyEmergencyLookaheadSeconds() { return safetyEmergencyLookaheadSeconds; }
+    /** @return hard stop speed reduction factor */
     public double getSafetyHardStopFactor() { return safetyHardStopFactor; }
+    /** @return soft brake speed reduction factor */
     public double getSafetySoftBrakeFactor() { return safetySoftBrakeFactor; }
+    /** @return minimum speed for soft brake application */
     public double getSafetySoftBrakeMinimumSpeed() { return safetySoftBrakeMinimumSpeed; }
+    /** @return stuck vehicle distance threshold in units */
     public double getStuckDistanceThreshold() { return stuckDistanceThreshold; }
+    /** @return stuck vehicle timeout in milliseconds */
     public long getStuckTimeMillis() { return stuckTimeMillis; }
+    /** @return stuck escape speed boost factor */
     public double getStuckEscapeSpeedFactor() { return stuckEscapeSpeedFactor; }
+    /** @return maximum reconnect attempts before exit */
     public int getReconnectMaxAttempts() { return reconnectMaxAttempts; }
+    /** @return initial reconnect backoff in milliseconds */
     public long getReconnectInitialBackoffMillis() { return reconnectInitialBackoffMillis; }
+    /** @return maximum reconnect backoff in milliseconds */
     public long getReconnectMaxBackoffMillis() { return reconnectMaxBackoffMillis; }
 }

@@ -10,14 +10,29 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Translates common exceptions thrown by REST endpoints into JSON error responses.
+ */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    /**
+     * Handles transport or process I/O failures.
+     *
+     * @param ex thrown exception
+     * @return conflict response with standardized error payload
+     */
     @ExceptionHandler(IOException.class)
     public ResponseEntity<Map<String, Object>> handleIo(IOException ex) {
         return response(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    /**
+     * Handles request validation and argument contract failures.
+     *
+     * @param ex thrown exception
+     * @return bad request response with standardized error payload
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return response(HttpStatus.BAD_REQUEST, ex.getMessage());

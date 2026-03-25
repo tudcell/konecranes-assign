@@ -21,10 +21,12 @@ public class SseProperties {
      */
     private long emitterTimeoutMillis = 0L;
 
+    /** @return SSE emitter timeout in milliseconds */
     public long getEmitterTimeoutMillis() {
         return emitterTimeoutMillis;
     }
 
+    /** @param emitterTimeoutMillis SSE emitter timeout in milliseconds */
     public void setEmitterTimeoutMillis(long emitterTimeoutMillis) {
         this.emitterTimeoutMillis = emitterTimeoutMillis;
     }

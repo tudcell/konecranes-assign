@@ -1,11 +1,5 @@
 package com.example.konecranes.application;
 
-import com.example.konecranes.config.SimulationProperties;
-import com.example.konecranes.messaging.EnvironmentUpdate;
-import com.example.konecranes.messaging.RegisterVehicleAck;
-import com.example.konecranes.model.SimulationWorld;
-import com.example.konecranes.model.VehicleState;
-import com.example.konecranes.model.VehicleStatus;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionCommand;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionUseCase;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
@@ -13,10 +7,19 @@ import com.example.konecranes.application.port.in.RegisterVehicleSessionUseCase;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleRegistrationGatewayPort;
 import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.config.SimulationProperties;
+import com.example.konecranes.messaging.EnvironmentUpdate;
+import com.example.konecranes.messaging.RegisterVehicleAck;
+import com.example.konecranes.model.SimulationWorld;
+import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.model.VehicleStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 
+/**
+ * Application service for vehicle session registration and disconnect handling.
+ */
 @Service
 public class VehicleSessionService implements RegisterVehicleSessionUseCase, DisconnectVehicleSessionUseCase {
 
@@ -35,6 +38,12 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         this.properties = properties;
     }
 
+    /**
+     * Registers a vehicle session, persists initial state, sends ACK and environment snapshot.
+     *
+     * @param command registration input
+     * @throws IOException when ACK or environment send fails
+     */
     @Override
     public void register(RegisterVehicleSessionCommand command) throws IOException {
         VehicleState state = new VehicleState();
@@ -60,6 +69,11 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         environmentGatewayPort.sendEnvironment(command.getVehicleId(), environment);
     }
 
+    /**
+     * Marks a vehicle as disconnected in the state store.
+     *
+     * @param command disconnect input
+     */
     @Override
     public void disconnect(DisconnectVehicleSessionCommand command) {
         if (command == null || command.getVehicleId() == null) {
@@ -71,5 +85,4 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         });
     }
 }
-
 

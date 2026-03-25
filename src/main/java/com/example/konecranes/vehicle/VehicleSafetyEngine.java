@@ -17,6 +17,15 @@ public class VehicleSafetyEngine {
         this.config = config;
     }
 
+    /**
+     * Detects the nearest immediate collision threat for the next movement step.
+     *
+     * @param state current self state
+     * @param nearbyVehicles latest nearby vehicles
+     * @param nextX predicted next X position
+     * @param nextY predicted next Y position
+     * @return nearest threatening vehicle or null when no immediate threat is found
+     */
     public VehicleState findImmediateThreat(VehicleState state,
                                             Iterable<VehicleState> nearbyVehicles,
                                             double nextX,
@@ -41,6 +50,13 @@ public class VehicleSafetyEngine {
         return nearestThreat;
     }
 
+    /**
+     * Applies emergency braking/escape action against a detected threat.
+     *
+     * @param state self vehicle state to mutate
+     * @param threat detected threat vehicle
+     * @param targetDirectionSetter callback used to update target steering
+     */
     public void applyEmergencyManeuver(VehicleState state,
                                        VehicleState threat,
                                        DoubleConsumer targetDirectionSetter) {
@@ -72,6 +88,16 @@ public class VehicleSafetyEngine {
         state.setCurrentAction(AvoidanceAction.KEEP_COURSE);
     }
 
+    /**
+     * Tests whether a collision is imminent within the lookahead window.
+     *
+     * @param self current vehicle
+     * @param other potential threat vehicle
+     * @param selfNextX predicted next X position of self
+     * @param selfNextY predicted next Y position of self
+     * @param emergencyDistance safety boundary distance
+     * @return true when collision is likely within lookahead period
+     */
     private boolean isEmergencyLikely(VehicleState self,
                                       VehicleState other,
                                       double selfNextX,
@@ -93,6 +119,15 @@ public class VehicleSafetyEngine {
         return distance(selfFutureX, selfFutureY, otherFutureX, otherFutureY) <= emergencyDistance;
     }
 
+    /**
+     * Euclidean distance between two points.
+     *
+     * @param x1 first point X
+     * @param y1 first point Y
+     * @param x2 second point X
+     * @param y2 second point Y
+     * @return distance
+     */
     private double distance(double x1, double y1, double x2, double y2) {
         return Math.hypot(x1 - x2, y1 - y2);
     }

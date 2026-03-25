@@ -1,14 +1,17 @@
 package com.example.konecranes.application;
 
+import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
+import com.example.konecranes.application.port.in.UpdateVehicleStateUseCase;
+import com.example.konecranes.application.port.out.VehicleStateStore;
 import com.example.konecranes.model.AvoidanceAction;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
-import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
-import com.example.konecranes.application.port.in.UpdateVehicleStateUseCase;
-import com.example.konecranes.application.port.out.VehicleStateStore;
 import org.springframework.stereotype.Service;
 
+/**
+ * Application service that persists incoming vehicle state updates.
+ */
 @Service
 public class VehicleUpdateService implements UpdateVehicleStateUseCase {
 
@@ -18,11 +21,21 @@ public class VehicleUpdateService implements UpdateVehicleStateUseCase {
         this.vehicleStateStore = vehicleStateStore;
     }
 
+    /**
+     * Persists one already-built domain state and refreshes timestamp.
+     *
+     * @param state vehicle state to store
+     */
     public void updateState(VehicleState state) {
         state.setTimestamp(System.currentTimeMillis());
         vehicleStateStore.upsert(state);
     }
 
+    /**
+     * Maps a transport command into domain model and persists it.
+     *
+     * @param command incoming state command
+     */
     @Override
     public void updateState(UpdateVehicleStateCommand command) {
         VehicleState state = new VehicleState();
@@ -39,4 +52,3 @@ public class VehicleUpdateService implements UpdateVehicleStateUseCase {
         updateState(state);
     }
 }
-

@@ -15,6 +15,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * TCP inbound adapter that accepts vehicle connections and dispatches sessions.
+ */
 @Component
 public class VehicleGatewayServer {
 
@@ -37,6 +40,9 @@ public class VehicleGatewayServer {
         this.sessionConnectionRegistry = sessionConnectionRegistry;
     }
 
+    /**
+     * Opens the server socket and starts accept loop if not already running.
+     */
     @PostConstruct
     public void start() {
         if (!running.compareAndSet(false, true)) {
@@ -67,6 +73,9 @@ public class VehicleGatewayServer {
         }
     }
 
+    /**
+     * Stops accept loop, detaches active sessions, and shuts down executors.
+     */
     @PreDestroy
     public void stop() {
         if (!running.getAndSet(false)) {

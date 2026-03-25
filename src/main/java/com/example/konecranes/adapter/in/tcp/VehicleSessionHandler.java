@@ -1,16 +1,16 @@
 package com.example.konecranes.adapter.in.tcp;
 
-import com.example.konecranes.messaging.RegisterVehicleRequest;
-import com.example.konecranes.messaging.WireMessage;
-import com.example.konecranes.model.MessageType;
-import com.example.konecranes.model.VehicleState;
+import com.example.konecranes.adapter.out.tcp.VehicleSessionConnectionRegistry;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionCommand;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionUseCase;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionUseCase;
 import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
 import com.example.konecranes.application.port.in.UpdateVehicleStateUseCase;
-import com.example.konecranes.adapter.out.tcp.VehicleSessionConnectionRegistry;
+import com.example.konecranes.messaging.RegisterVehicleRequest;
+import com.example.konecranes.messaging.WireMessage;
+import com.example.konecranes.model.MessageType;
+import com.example.konecranes.model.VehicleState;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -27,6 +27,9 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+/**
+ * TCP inbound adapter that handles one vehicle socket session.
+ */
 @Service
 public class VehicleSessionHandler {
 
@@ -50,6 +53,11 @@ public class VehicleSessionHandler {
         this.sessionConnectionRegistry = sessionConnectionRegistry;
     }
 
+    /**
+     * Reads line-delimited wire messages from one socket until disconnect.
+     *
+     * @param socket accepted vehicle socket
+     */
     public void handle(Socket socket) {
         String vehicleId = null;
         try (Socket ignored = socket;
@@ -91,6 +99,14 @@ public class VehicleSessionHandler {
         }
     }
 
+    /**
+     * Dispatches one wire message to the matching application use case.
+     *
+     * @param message parsed wire message
+     * @param writer writer bound to the same socket (used by register flow)
+     * @return resolved vehicle id when available, otherwise null
+     * @throws IOException when downstream transport write fails
+     */
     private String handleMessage(WireMessage message, BufferedWriter writer) throws IOException {
         if (message.getType() == MessageType.REGISTER) {
             return handleRegister(message, writer);
@@ -105,6 +121,14 @@ public class VehicleSessionHandler {
         return null;
     }
 
+    /**
+     * Handles a REGISTER message, persists session, and sends initial handshake data.
+     *
+     * @param message register message payload
+     * @param writer socket writer for later gateway sends
+     * @return registered vehicle id
+     * @throws IOException when register acknowledgement or environment send fails
+     */
     private String handleRegister(WireMessage message, BufferedWriter writer) throws IOException {
         RegisterVehicleRequest request = objectMapper.convertValue(message.getPayload(), RegisterVehicleRequest.class);
         sessionConnectionRegistry.attach(request.getVehicleId(), writer);
@@ -124,6 +148,12 @@ public class VehicleSessionHandler {
         return request.getVehicleId();
     }
 
+    /**
+     * Handles one STATE_UPDATE message.
+     *
+     * @param message state update payload
+     * @return vehicle id found in the state payload
+     */
     private String handleStateUpdate(WireMessage message) {
         VehicleState state = objectMapper.convertValue(message.getPayload(), VehicleState.class);
         UpdateVehicleStateCommand command = new UpdateVehicleStateCommand(
@@ -141,6 +171,12 @@ public class VehicleSessionHandler {
         return state.getId();
     }
 
+    /**
+     * Handles one DISCONNECT message.
+     *
+     * @param message disconnect payload containing vehicle id
+     * @return disconnected vehicle id
+     */
     private String handleDisconnect(WireMessage message) {
         Map<String, String> payload = objectMapper.convertValue(message.getPayload(), new TypeReference<>() {
         });

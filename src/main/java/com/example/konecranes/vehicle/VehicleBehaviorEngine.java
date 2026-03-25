@@ -46,6 +46,11 @@ public class VehicleBehaviorEngine {
         this.controlPolicy = new VehicleControlPolicy(config);
     }
 
+    /**
+     * Replaces the local perception context with the latest environment update.
+     *
+     * @param update nearby vehicle snapshot sent by coordinator
+     */
     public void onEnvironmentUpdate(EnvironmentUpdate update) {
         nearbyVehicles.clear();
         for (VehicleState vehicleState : update.getNearbyVehicles()) {
@@ -53,10 +58,18 @@ public class VehicleBehaviorEngine {
         }
     }
 
+    /**
+     * Applies a manual control command to the current vehicle state.
+     *
+     * @param command inbound control command
+     */
     public void onControlCommand(ControlCommand command) {
         controlPolicy.applyControlCommand(command, selfState.get(), motionEngine::setTargetDirection);
     }
 
+    /**
+     * Executes one movement tick, including immediate safety checks.
+     */
     public void movementTick() {
         VehicleState state = selfState.get();
         motionEngine.rotateTowardsTarget(state);
@@ -86,12 +99,20 @@ public class VehicleBehaviorEngine {
         checkAndEscapeIfStuck(state);
     }
 
+    /**
+     * Executes one AI/control policy tick using the latest nearby context.
+     */
     public void aiTick() {
         VehicleState current = selfState.get();
         List<VehicleState> context = new ArrayList<>(nearbyVehicles.values());
         controlPolicy.aiTick(current, context, motionEngine::getTargetDirection, motionEngine::setTargetDirection);
     }
 
+    /**
+     * Detects if vehicle is stuck (no movement for extended period) and applies escape maneuver.
+     *
+     * @param state current vehicle state to mutate
+     */
     private void checkAndEscapeIfStuck(VehicleState state) {
         PositionSnapshot snapshot = lastPositionSnapshot.get();
         long now = System.currentTimeMillis();
@@ -114,24 +135,52 @@ public class VehicleBehaviorEngine {
         }
     }
 
+    /**
+     * Euclidean distance between two points.
+     *
+     * @param x1 first point X
+     * @param y1 first point Y
+     * @param x2 second point X
+     * @param y2 second point Y
+     * @return distance
+     */
     private double distance(double x1, double y1, double x2, double y2) {
         return Math.hypot(x1 - x2, y1 - y2);
     }
 
+    /**
+     * Normalizes direction to range [0, 360) degrees.
+     *
+     * @param direction input angle
+     * @return normalized direction
+     */
     private double normalizeDirection(double direction) {
         double normalized = direction % 360.0;
         return normalized < 0.0 ? normalized + 360.0 : normalized;
     }
 
+    /**
+     * Returns a defensive copy of the current self state for transport.
+     *
+     * @return detached vehicle state snapshot
+     */
     public VehicleState currentStateCopy() {
         return selfState.get().copy();
     }
 
+    /**
+     * Snapshot of vehicle position and timestamp for stuck detection.
+     */
     private static class PositionSnapshot {
         final double x;
         final double y;
         final long timestamp;
 
+        /**
+         * @param x X coordinate
+         * @param y Y coordinate
+         * @param timestamp timestamp in epoch milliseconds
+         */
         PositionSnapshot(double x, double y, long timestamp) {
             this.x = x;
             this.y = y;

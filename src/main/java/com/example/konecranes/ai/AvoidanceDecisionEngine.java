@@ -8,6 +8,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Selects the lowest-risk maneuver from a small set of candidate actions.
+ */
 public class AvoidanceDecisionEngine {
 
     private final RiskEstimator riskEstimator;
@@ -18,6 +21,13 @@ public class AvoidanceDecisionEngine {
         this.keepCourseRiskThreshold = keepCourseRiskThreshold;
     }
 
+    /**
+     * Chooses a control action for the current vehicle state and nearby context.
+     *
+     * @param self current vehicle snapshot
+     * @param nearbyVehicles nearby vehicle snapshots
+     * @return selected action plus risk metadata
+     */
     public DecisionResult choose(VehicleState self, List<VehicleState> nearbyVehicles) {
         if (nearbyVehicles.isEmpty()) {
             return new DecisionResult(AvoidanceAction.KEEP_COURSE, 0.0, RiskLevel.LOW);
@@ -89,25 +99,36 @@ public class AvoidanceDecisionEngine {
         }
     }
 
+    /**
+     * Decision payload returned by {@link #choose(VehicleState, List)}.
+     */
     public static class DecisionResult {
         private final AvoidanceAction action;
         private final double riskScore;
         private final RiskLevel riskLevel;
 
+        /**
+         * @param action chosen maneuver
+         * @param riskScore current aggregated risk score
+         * @param riskLevel current risk level bucket
+         */
         public DecisionResult(AvoidanceAction action, double riskScore, RiskLevel riskLevel) {
             this.action = action;
             this.riskScore = riskScore;
             this.riskLevel = riskLevel;
         }
 
+        /** @return chosen maneuver */
         public AvoidanceAction getAction() {
             return action;
         }
 
+        /** @return aggregated risk score */
         public double getRiskScore() {
             return riskScore;
         }
 
+        /** @return risk level bucket */
         public RiskLevel getRiskLevel() {
             return riskLevel;
         }

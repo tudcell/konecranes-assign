@@ -18,6 +18,11 @@ public class VehicleMotionEngine {
         setTargetDirection(initialDirectionDeg);
     }
 
+    /**
+     * Rotates current heading toward target heading with bounded turn rate.
+     *
+     * @param state mutable self state
+     */
     public void rotateTowardsTarget(VehicleState state) {
         double current = normalizeDirection(state.getDirectionDeg());
         double target = getTargetDirection();
@@ -26,6 +31,11 @@ public class VehicleMotionEngine {
         state.setDirectionDeg(normalizeDirection(current + boundedDelta));
     }
 
+    /**
+     * Applies world boundary reflection and speed/status recovery if needed.
+     *
+     * @param state mutable self state
+     */
     public void bounceIfNeeded(VehicleState state) {
         double radius = state.getRadius();
         boolean bounced = false;
@@ -60,15 +70,30 @@ public class VehicleMotionEngine {
         }
     }
 
+    /**
+     * Sets target heading used by turn-rate-limited rotation.
+     *
+     * @param direction desired heading in degrees
+     */
     public void setTargetDirection(double direction) {
         long scaled = Math.round(normalizeDirection(direction) * 100.0);
         targetDirectionDegTimes100.set(scaled);
     }
 
+    /**
+     * @return target heading in degrees
+     */
     public double getTargetDirection() {
         return targetDirectionDegTimes100.get() / 100.0;
     }
 
+    /**
+     * Computes shortest signed rotation angle from one heading to another.
+     *
+     * @param fromDeg starting heading in degrees
+     * @param toDeg target heading in degrees
+     * @return signed delta in range [-180, 180] degrees
+     */
     private double shortestSignedDeltaDeg(double fromDeg, double toDeg) {
         double delta = (toDeg - fromDeg + 540.0) % 360.0 - 180.0;
         if (delta == -180.0) {
@@ -77,6 +102,12 @@ public class VehicleMotionEngine {
         return delta;
     }
 
+    /**
+     * Normalizes direction to range [0, 360) degrees.
+     *
+     * @param direction input angle in degrees
+     * @return normalized direction
+     */
     private double normalizeDirection(double direction) {
         double normalized = direction % 360.0;
         return normalized < 0.0 ? normalized + 360.0 : normalized;

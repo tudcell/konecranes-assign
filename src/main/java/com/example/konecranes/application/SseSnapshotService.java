@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Application service that manages simulation snapshot subscribers and publishing.
+ */
 @Service
 public class SseSnapshotService implements SimulationStreamUseCase, SimulationSnapshotPublisher {
 
@@ -19,6 +22,12 @@ public class SseSnapshotService implements SimulationStreamUseCase, SimulationSn
 
     private final Map<String, SimulationSnapshotListener> listeners = new ConcurrentHashMap<>();
 
+    /**
+     * Registers a new snapshot subscriber.
+     *
+     * @param listener callback to invoke for each snapshot
+     * @return generated subscription identifier
+     */
     @Override
     public String subscribe(SimulationSnapshotListener listener) {
         String subscriptionId = UUID.randomUUID().toString();
@@ -26,6 +35,11 @@ public class SseSnapshotService implements SimulationStreamUseCase, SimulationSn
         return subscriptionId;
     }
 
+    /**
+     * Removes a snapshot subscriber.
+     *
+     * @param subscriptionId subscriber id returned by {@link #subscribe(SimulationSnapshotListener)}
+     */
     @Override
     public void unsubscribe(String subscriptionId) {
         if (subscriptionId == null) {
@@ -34,6 +48,11 @@ public class SseSnapshotService implements SimulationStreamUseCase, SimulationSn
         listeners.remove(subscriptionId);
     }
 
+    /**
+     * Publishes one snapshot to all current subscribers.
+     *
+     * @param snapshot snapshot payload
+     */
     @Override
     public void publish(SimulationSnapshot snapshot) {
         for (Map.Entry<String, SimulationSnapshotListener> entry : listeners.entrySet()) {

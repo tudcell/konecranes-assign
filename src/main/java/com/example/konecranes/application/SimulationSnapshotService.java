@@ -12,6 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Application query service that builds the read model for UI/API snapshots.
+ */
 @Service
 public class SimulationSnapshotService implements SimulationQueryUseCase {
 
@@ -23,6 +26,11 @@ public class SimulationSnapshotService implements SimulationQueryUseCase {
         this.properties = properties;
     }
 
+    /**
+     * Builds the current snapshot from active vehicles and world settings.
+     *
+     * @return simulation snapshot for API and SSE consumers
+     */
     @Override
     public SimulationSnapshot currentSnapshot() {
         List<VehicleState> vehicles = vehicleStateStore.findAll().stream()

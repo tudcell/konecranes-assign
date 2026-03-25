@@ -30,6 +30,13 @@ public class VehicleControlPolicy {
                 config.getAiKeepCourseRiskThreshold());
     }
 
+    /**
+     * Applies a manual control command and updates manual override timers.
+     *
+     * @param command command from coordinator
+     * @param state mutable self state
+     * @param targetDirectionSetter callback to set steering target
+     */
     public void applyControlCommand(ControlCommand command, VehicleState state, DoubleConsumer targetDirectionSetter) {
         if (command == null) {
             return;
@@ -47,6 +54,14 @@ public class VehicleControlPolicy {
         }
     }
 
+    /**
+     * Executes one AI control tick when manual override is not active.
+     *
+     * @param current mutable current state
+     * @param context nearby vehicle context
+     * @param targetDirectionGetter callback to read current target heading
+     * @param targetDirectionSetter callback to update target heading
+     */
     public void aiTick(VehicleState current,
                        List<VehicleState> context,
                        DoubleSupplier targetDirectionGetter,

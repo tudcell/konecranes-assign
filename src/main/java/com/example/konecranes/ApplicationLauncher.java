@@ -7,8 +7,18 @@ import org.springframework.boot.SpringApplication;
 
 import java.util.Arrays;
 
+/**
+ * Entry point that switches between coordinator mode and vehicle process mode.
+ */
 public class ApplicationLauncher {
     private static final Logger logger = LoggerFactory.getLogger(ApplicationLauncher.class);
+
+    /**
+     * Starts coordinator mode by default, or delegates to vehicle runtime when
+     * {@code --mode=vehicle} is present.
+     *
+     * @param args command line arguments
+     */
     public static void main(String[] args) {
 
         logger.info("Application launcher started with args={}", Arrays.toString(args));

@@ -8,9 +8,15 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 
+/**
+ * Outbound process adapter that launches child JVMs for vehicles.
+ */
 @Component
 public class JvmVehicleProcessLauncher implements VehicleProcessLauncherPort {
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public VehicleProcessHandle launch(List<String> command) throws IOException {
         Process process = new ProcessBuilder(command)
@@ -20,6 +26,9 @@ public class JvmVehicleProcessLauncher implements VehicleProcessLauncherPort {
         return new JvmVehicleProcessHandle(process);
     }
 
+    /**
+     * JVM-backed implementation of the generic vehicle process handle.
+     */
     private static class JvmVehicleProcessHandle implements VehicleProcessHandle {
         private final Process process;
 
