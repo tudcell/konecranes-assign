@@ -69,6 +69,8 @@ public class VehicleGatewayServer {
                 if (running.get()) {
                     logger.error("Gateway accept loop failed", ex);
                 }
+                // Break the loop after IOException to avoid repeated error logs
+                break;
             }
         }
     }
@@ -111,7 +113,9 @@ public class VehicleGatewayServer {
             executor.shutdownNow();
         }
     }
+
+    // Package-private setter for testability
+    void setServerSocket(ServerSocket serverSocket) {
+        this.serverSocket = serverSocket;
+    }
 }
-
-
-

@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.VehicleSpawnerService;
 import com.example.konecranes.application.port.out.VehicleProcessHandle;
 import com.example.konecranes.application.port.out.VehicleProcessLauncherPort;
 import com.example.konecranes.application.port.out.VehicleStateStore;
@@ -92,6 +91,4 @@ class VehicleSpawnerServiceTest {
         Files.deleteIfExists(fakeJar);
     }
 }
-
-
 

@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.SimulationSnapshotService;
 import com.example.konecranes.application.port.out.VehicleStateStore;
 import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.model.RiskLevel;

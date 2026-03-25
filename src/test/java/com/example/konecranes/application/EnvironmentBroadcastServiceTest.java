@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.EnvironmentBroadcastService;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleStateStore;
 import com.example.konecranes.messaging.EnvironmentUpdate;

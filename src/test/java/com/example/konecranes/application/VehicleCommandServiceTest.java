@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.VehicleCommandService;
 import com.example.konecranes.application.port.out.VehicleCommandGatewayPort;
 import com.example.konecranes.messaging.ControlCommand;
 import org.junit.jupiter.api.Test;

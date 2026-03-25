@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.SseSnapshotService;
 import com.example.konecranes.model.SimulationSnapshot;
 import org.junit.jupiter.api.Test;
 

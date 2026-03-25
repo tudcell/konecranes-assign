@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.VehicleUpdateService;
 import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
 import com.example.konecranes.application.port.out.VehicleStateStore;
 import com.example.konecranes.model.AvoidanceAction;
@@ -53,5 +52,4 @@ class VehicleUpdateServiceTest {
         assertTrue(persisted.getTimestamp() > 0);
     }
 }
-
 

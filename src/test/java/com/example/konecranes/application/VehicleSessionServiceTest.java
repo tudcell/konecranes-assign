@@ -1,6 +1,5 @@
-package com.example.konecranes.service;
+package com.example.konecranes.application;
 
-import com.example.konecranes.application.VehicleSessionService;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleRegistrationGatewayPort;
@@ -58,7 +57,6 @@ class VehicleSessionServiceTest {
         assertEquals(VehicleStatus.ACTIVE, persisted.getStatus());
         assertTrue(persisted.getTimestamp() > 0);
 
-
         ArgumentCaptor<RegisterVehicleAck> ackCaptor = ArgumentCaptor.forClass(RegisterVehicleAck.class);
         verify(registrationGatewayPort).sendAck(org.mockito.ArgumentMatchers.eq("VH-REG"), ackCaptor.capture());
         assertEquals(1000.0, ackCaptor.getValue().getWorld().getWidth());
@@ -69,5 +67,4 @@ class VehicleSessionServiceTest {
         assertSame(Collections.emptyList(), envCaptor.getValue().getNearbyVehicles());
     }
 }
-
 
