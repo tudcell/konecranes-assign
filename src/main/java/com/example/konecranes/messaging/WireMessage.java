@@ -1,7 +1,5 @@
 package com.example.konecranes.messaging;
 
-import com.example.konecranes.model.MessageType;
-
 /**
  * Generic line-delimited JSON envelope exchanged over TCP.
  */

@@ -4,7 +4,7 @@ import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -20,12 +20,12 @@ public class EnvironmentBroadcastService {
 
     private static final Logger logger = LoggerFactory.getLogger(EnvironmentBroadcastService.class);
 
-    private final VehicleStateStore vehicleStateStore;
+    private final VehicleStateRepository vehicleStateRepository;
     private final VehicleEnvironmentGatewayPort environmentGatewayPort;
 
-    public EnvironmentBroadcastService(VehicleStateStore vehicleStateStore,
+    public EnvironmentBroadcastService(VehicleStateRepository vehicleStateRepository,
                                        VehicleEnvironmentGatewayPort environmentGatewayPort) {
-        this.vehicleStateStore = vehicleStateStore;
+        this.vehicleStateRepository = vehicleStateRepository;
         this.environmentGatewayPort = environmentGatewayPort;
     }
 
@@ -33,7 +33,7 @@ public class EnvironmentBroadcastService {
      * Sends current nearby-vehicle context to each active vehicle.
      */
     public void broadcastToAll() {
-        List<VehicleState> activeVehicles = vehicleStateStore.findAll().stream()
+        List<VehicleState> activeVehicles = vehicleStateRepository.findAll().stream()
                 .filter(vehicle -> vehicle.getStatus() == VehicleStatus.ACTIVE)
                 .collect(java.util.stream.Collectors.toList());
 

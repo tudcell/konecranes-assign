@@ -6,10 +6,10 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import static org.mockito.Mockito.*;
 
-class VehicleSessionConnectionRegistryTest {
+class SessionConnectionRegistryTest {
     @Test
     void attachAndDetachConnection() throws IOException {
-        VehicleConnectionManager registry = new VehicleConnectionManager(new ObjectMapper());
+        TcpVehicleGatewayAdapter registry = new TcpVehicleGatewayAdapter(new ObjectMapper());
         BufferedWriter writer = mock(BufferedWriter.class);
         String vehicleId = "VH-UNITTEST";
         registry.attach(vehicleId, writer);
@@ -22,7 +22,7 @@ class VehicleSessionConnectionRegistryTest {
 
     @Test
     void detachAllClosesAllWriters() throws IOException {
-        VehicleConnectionManager registry = new VehicleConnectionManager(new ObjectMapper());
+        TcpVehicleGatewayAdapter registry = new TcpVehicleGatewayAdapter(new ObjectMapper());
         BufferedWriter writer1 = mock(BufferedWriter.class);
         BufferedWriter writer2 = mock(BufferedWriter.class);
         registry.attach("VH-1", writer1);

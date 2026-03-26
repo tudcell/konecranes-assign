@@ -4,7 +4,7 @@ import com.example.konecranes.messaging.ControlCommand;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.RegisterVehicleAck;
 import com.example.konecranes.messaging.WireMessage;
-import com.example.konecranes.model.MessageType;
+import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.application.port.out.VehicleCommandGatewayPort;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleRegistrationGatewayPort;
@@ -23,17 +23,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * Outbound TCP adapter that stores active vehicle writers and sends wire messages.
  */
 @Service
-public class VehicleConnectionManager implements VehicleRegistrationGatewayPort,
+public class TcpVehicleGatewayAdapter implements VehicleRegistrationGatewayPort,
         VehicleEnvironmentGatewayPort,
         VehicleCommandGatewayPort,
-        VehicleSessionConnectionRegistry {
+        SessionConnectionRegistry {
 
-    private static final Logger logger = LoggerFactory.getLogger(VehicleConnectionManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(TcpVehicleGatewayAdapter.class);
 
     private final ObjectMapper objectMapper;
     private final Map<String, BufferedWriter> writers = new ConcurrentHashMap<>();
 
-    public VehicleConnectionManager(ObjectMapper objectMapper) {
+    public TcpVehicleGatewayAdapter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 

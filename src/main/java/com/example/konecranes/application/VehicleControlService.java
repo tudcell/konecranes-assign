@@ -11,11 +11,11 @@ import java.io.IOException;
  * Application service that maps manual control use cases to gateway commands.
  */
 @Service
-public class VehicleCommandService implements VehicleControlUseCase {
+public class VehicleControlService implements VehicleControlUseCase {
 
     private final VehicleCommandGatewayPort commandGatewayPort;
 
-    public VehicleCommandService(VehicleCommandGatewayPort commandGatewayPort) {
+    public VehicleControlService(VehicleCommandGatewayPort commandGatewayPort) {
         this.commandGatewayPort = commandGatewayPort;
     }
 

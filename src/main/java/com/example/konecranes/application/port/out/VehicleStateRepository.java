@@ -8,7 +8,7 @@ import java.util.Optional;
 /**
  * Outbound persistence port for vehicle states.
  */
-public interface VehicleStateStore {
+public interface VehicleStateRepository {
 
     /**
      * Inserts or updates one vehicle state.

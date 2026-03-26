@@ -2,7 +2,7 @@ package com.example.konecranes.application;
 
 import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
 import com.example.konecranes.application.port.in.UpdateVehicleStateUseCase;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.model.AvoidanceAction;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.VehicleState;
@@ -15,10 +15,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class VehicleUpdateService implements UpdateVehicleStateUseCase {
 
-    private final VehicleStateStore vehicleStateStore;
+    private final VehicleStateRepository vehicleStateRepository;
 
-    public VehicleUpdateService(VehicleStateStore vehicleStateStore) {
-        this.vehicleStateStore = vehicleStateStore;
+    public VehicleUpdateService(VehicleStateRepository vehicleStateRepository) {
+        this.vehicleStateRepository = vehicleStateRepository;
     }
 
     /**
@@ -28,7 +28,7 @@ public class VehicleUpdateService implements UpdateVehicleStateUseCase {
      */
     public void updateState(VehicleState state) {
         state.setTimestamp(System.currentTimeMillis());
-        vehicleStateStore.upsert(state);
+        vehicleStateRepository.upsert(state);
     }
 
     /**

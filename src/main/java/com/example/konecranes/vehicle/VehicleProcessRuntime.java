@@ -4,7 +4,7 @@ import com.example.konecranes.messaging.ControlCommand;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.messaging.WireMessage;
-import com.example.konecranes.model.MessageType;
+import com.example.konecranes.messaging.MessageType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

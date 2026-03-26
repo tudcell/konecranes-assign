@@ -7,7 +7,7 @@ import com.example.konecranes.model.SimulationWorld;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
 import com.example.konecranes.application.port.in.SimulationQueryUseCase;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,11 +18,11 @@ import java.util.List;
 @Service
 public class SimulationSnapshotService implements SimulationQueryUseCase {
 
-    private final VehicleStateStore vehicleStateStore;
+    private final VehicleStateRepository vehicleStateRepository;
     private final SimulationProperties properties;
 
-    public SimulationSnapshotService(VehicleStateStore vehicleStateStore, SimulationProperties properties) {
-        this.vehicleStateStore = vehicleStateStore;
+    public SimulationSnapshotService(VehicleStateRepository vehicleStateRepository, SimulationProperties properties) {
+        this.vehicleStateRepository = vehicleStateRepository;
         this.properties = properties;
     }
 
@@ -33,7 +33,7 @@ public class SimulationSnapshotService implements SimulationQueryUseCase {
      */
     @Override
     public SimulationSnapshot currentSnapshot() {
-        List<VehicleState> vehicles = vehicleStateStore.findAll().stream()
+        List<VehicleState> vehicles = vehicleStateRepository.findAll().stream()
                 .filter(vehicle -> vehicle.getStatus() != VehicleStatus.DISCONNECTED)
                 .collect(java.util.stream.Collectors.toList());
         SimulationSnapshot snapshot = new SimulationSnapshot();

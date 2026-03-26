@@ -5,7 +5,7 @@ import java.io.BufferedWriter;
 /**
  * Registry abstraction for active vehicle TCP writers.
  */
-public interface VehicleSessionConnectionRegistry {
+public interface SessionConnectionRegistry {
 
     /**
      * Registers the writer for a connected vehicle session.

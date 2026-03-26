@@ -3,7 +3,7 @@ package com.example.konecranes.application;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleRegistrationGatewayPort;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.RegisterVehicleAck;
@@ -26,7 +26,7 @@ class VehicleSessionServiceTest {
 
     @Test
     void registerPersistsStateAndSendsHandshake() throws IOException {
-        VehicleStateStore stateStore = mock(VehicleStateStore.class);
+        VehicleStateRepository stateStore = mock(VehicleStateRepository.class);
         VehicleRegistrationGatewayPort registrationGatewayPort = mock(VehicleRegistrationGatewayPort.class);
         VehicleEnvironmentGatewayPort environmentGatewayPort = mock(VehicleEnvironmentGatewayPort.class);
         SimulationProperties properties = new SimulationProperties();

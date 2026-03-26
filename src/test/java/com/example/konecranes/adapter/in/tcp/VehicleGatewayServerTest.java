@@ -1,12 +1,12 @@
 package com.example.konecranes.adapter.in.tcp;
 
+import com.example.konecranes.adapter.out.tcp.SessionConnectionRegistry;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.IOException;
 import com.example.konecranes.config.SimulationProperties;
-import com.example.konecranes.adapter.out.tcp.VehicleSessionConnectionRegistry;
 
 import static org.mockito.Mockito.*;
 
@@ -19,7 +19,7 @@ class VehicleGatewayServerTest {
         gateway.setPort(12345);
         when(properties.getGateway()).thenReturn(gateway);
         VehicleSessionHandler handler = mock(VehicleSessionHandler.class);
-        VehicleSessionConnectionRegistry registry = mock(VehicleSessionConnectionRegistry.class);
+        SessionConnectionRegistry registry = mock(SessionConnectionRegistry.class);
         ServerSocket serverSocket = mock(ServerSocket.class);
         Socket socket = mock(Socket.class);
         when(serverSocket.accept()).thenReturn(socket).thenThrow(new IOException("Stop"));

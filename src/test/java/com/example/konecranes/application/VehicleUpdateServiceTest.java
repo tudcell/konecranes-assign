@@ -1,7 +1,7 @@
 package com.example.konecranes.application;
 
 import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.model.AvoidanceAction;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.VehicleState;
@@ -18,7 +18,7 @@ class VehicleUpdateServiceTest {
 
     @Test
     void updateStateCommandMapsToVehicleStateAndPersists() {
-        VehicleStateStore stateStore = mock(VehicleStateStore.class);
+        VehicleStateRepository stateStore = mock(VehicleStateRepository.class);
         VehicleUpdateService service = new VehicleUpdateService(stateStore);
 
         UpdateVehicleStateCommand command = new UpdateVehicleStateCommand(

@@ -6,7 +6,7 @@ import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionUseCase;
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
 import com.example.konecranes.application.port.out.VehicleRegistrationGatewayPort;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.messaging.RegisterVehicleAck;
@@ -23,16 +23,16 @@ import java.io.IOException;
 @Service
 public class VehicleSessionService implements RegisterVehicleSessionUseCase, DisconnectVehicleSessionUseCase {
 
-    private final VehicleStateStore vehicleStateStore;
+    private final VehicleStateRepository vehicleStateRepository;
     private final VehicleRegistrationGatewayPort registrationGatewayPort;
     private final VehicleEnvironmentGatewayPort environmentGatewayPort;
     private final SimulationProperties properties;
 
-    public VehicleSessionService(VehicleStateStore vehicleStateStore,
+    public VehicleSessionService(VehicleStateRepository vehicleStateRepository,
                                  VehicleRegistrationGatewayPort registrationGatewayPort,
                                  VehicleEnvironmentGatewayPort environmentGatewayPort,
                                  SimulationProperties properties) {
-        this.vehicleStateStore = vehicleStateStore;
+        this.vehicleStateRepository = vehicleStateRepository;
         this.registrationGatewayPort = registrationGatewayPort;
         this.environmentGatewayPort = environmentGatewayPort;
         this.properties = properties;
@@ -56,7 +56,7 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         state.setTimestamp(System.currentTimeMillis());
         state.setStatus(VehicleStatus.ACTIVE);
 
-        vehicleStateStore.upsert(state);
+        vehicleStateRepository.upsert(state);
 
         RegisterVehicleAck ack = new RegisterVehicleAck();
         ack.setVehicleId(command.getVehicleId());
@@ -64,7 +64,7 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         registrationGatewayPort.sendAck(command.getVehicleId(), ack);
 
         EnvironmentUpdate environment = new EnvironmentUpdate();
-        environment.setNearbyVehicles(vehicleStateStore.findAllExcept(command.getVehicleId()));
+        environment.setNearbyVehicles(vehicleStateRepository.findAllExcept(command.getVehicleId()));
         environment.setTimestamp(System.currentTimeMillis());
         environmentGatewayPort.sendEnvironment(command.getVehicleId(), environment);
     }
@@ -79,9 +79,9 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         if (command == null || command.getVehicleId() == null) {
             return;
         }
-        vehicleStateStore.findById(command.getVehicleId()).ifPresent(state -> {
+        vehicleStateRepository.findById(command.getVehicleId()).ifPresent(state -> {
             state.setStatus(VehicleStatus.DISCONNECTED);
-            vehicleStateStore.upsert(state);
+            vehicleStateRepository.upsert(state);
         });
     }
 }

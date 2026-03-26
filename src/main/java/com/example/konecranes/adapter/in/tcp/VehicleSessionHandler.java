@@ -1,6 +1,6 @@
 package com.example.konecranes.adapter.in.tcp;
 
-import com.example.konecranes.adapter.out.tcp.VehicleSessionConnectionRegistry;
+import com.example.konecranes.adapter.out.tcp.SessionConnectionRegistry;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionCommand;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionUseCase;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
@@ -9,7 +9,7 @@ import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
 import com.example.konecranes.application.port.in.UpdateVehicleStateUseCase;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.messaging.WireMessage;
-import com.example.konecranes.model.MessageType;
+import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.model.VehicleState;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,13 +39,13 @@ public class VehicleSessionHandler {
     private final RegisterVehicleSessionUseCase registerVehicleSessionUseCase;
     private final DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase;
     private final UpdateVehicleStateUseCase updateVehicleStateUseCase;
-    private final VehicleSessionConnectionRegistry sessionConnectionRegistry;
+    private final SessionConnectionRegistry sessionConnectionRegistry;
 
     public VehicleSessionHandler(ObjectMapper objectMapper,
                                  RegisterVehicleSessionUseCase registerVehicleSessionUseCase,
                                  DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase,
                                  UpdateVehicleStateUseCase updateVehicleStateUseCase,
-                                 VehicleSessionConnectionRegistry sessionConnectionRegistry) {
+                                 SessionConnectionRegistry sessionConnectionRegistry) {
         this.objectMapper = objectMapper;
         this.registerVehicleSessionUseCase = registerVehicleSessionUseCase;
         this.disconnectVehicleSessionUseCase = disconnectVehicleSessionUseCase;

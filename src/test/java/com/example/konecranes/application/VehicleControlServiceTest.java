@@ -12,12 +12,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-class VehicleCommandServiceTest {
+class VehicleControlServiceTest {
 
     @Test
     void overrideDirectionBuildsManualControlCommand() throws IOException {
         VehicleCommandGatewayPort gatewayPort = mock(VehicleCommandGatewayPort.class);
-        VehicleCommandService service = new VehicleCommandService(gatewayPort);
+        VehicleControlService service = new VehicleControlService(gatewayPort);
 
         service.overrideDirection("VH-TEST", 180.0);
 
@@ -33,7 +33,7 @@ class VehicleCommandServiceTest {
     @Test
     void overrideSpeedBuildsManualControlCommand() throws IOException {
         VehicleCommandGatewayPort gatewayPort = mock(VehicleCommandGatewayPort.class);
-        VehicleCommandService service = new VehicleCommandService(gatewayPort);
+        VehicleControlService service = new VehicleControlService(gatewayPort);
 
         service.overrideSpeed("VH-TEST", 25.0);
 

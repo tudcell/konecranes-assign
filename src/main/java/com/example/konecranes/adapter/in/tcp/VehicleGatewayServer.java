@@ -1,6 +1,6 @@
 package com.example.konecranes.adapter.in.tcp;
 
-import com.example.konecranes.adapter.out.tcp.VehicleSessionConnectionRegistry;
+import com.example.konecranes.adapter.out.tcp.SessionConnectionRegistry;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +26,7 @@ public class VehicleGatewayServer {
 
     private final int gatewayPort;
     private final VehicleSessionHandler sessionHandler;
-    private final VehicleSessionConnectionRegistry sessionConnectionRegistry;
+    private final SessionConnectionRegistry sessionConnectionRegistry;
     private final ExecutorService acceptorPool = Executors.newSingleThreadExecutor();
     private final ExecutorService clientPool = Executors.newCachedThreadPool();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -34,7 +34,7 @@ public class VehicleGatewayServer {
 
     public VehicleGatewayServer(com.example.konecranes.config.SimulationProperties properties,
                                 VehicleSessionHandler sessionHandler,
-                                VehicleSessionConnectionRegistry sessionConnectionRegistry) {
+                                SessionConnectionRegistry sessionConnectionRegistry) {
         this.gatewayPort = properties.getGateway().getPort();
         this.sessionHandler = sessionHandler;
         this.sessionConnectionRegistry = sessionConnectionRegistry;

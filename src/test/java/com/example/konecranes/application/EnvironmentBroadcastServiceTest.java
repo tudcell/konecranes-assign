@@ -1,7 +1,7 @@
 package com.example.konecranes.application;
 
 import com.example.konecranes.application.port.out.VehicleEnvironmentGatewayPort;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.messaging.EnvironmentUpdate;
 import com.example.konecranes.model.VehicleState;
 import com.example.konecranes.model.VehicleStatus;
@@ -24,7 +24,7 @@ class EnvironmentBroadcastServiceTest {
 
     @Test
     void broadcastsOnlyToActiveVehiclesWithActiveNeighbors() throws IOException {
-        VehicleStateStore stateStore = mock(VehicleStateStore.class);
+        VehicleStateRepository stateStore = mock(VehicleStateRepository.class);
         VehicleEnvironmentGatewayPort gatewayPort = mock(VehicleEnvironmentGatewayPort.class);
 
         VehicleState activeOne = state("VH-1", VehicleStatus.ACTIVE);

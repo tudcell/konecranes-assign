@@ -1,6 +1,6 @@
 package com.example.konecranes.application;
 
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.config.SimulationProperties;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.SimulationSnapshot;
@@ -19,7 +19,7 @@ class SimulationSnapshotServiceTest {
 
     @Test
     void currentSnapshotBuildsWorldAndHighRiskCount() {
-        VehicleStateStore stateStore = mock(VehicleStateStore.class);
+        VehicleStateRepository stateStore = mock(VehicleStateRepository.class);
 
         VehicleState highRisk = new VehicleState();
         highRisk.setId("VH-HIGH");

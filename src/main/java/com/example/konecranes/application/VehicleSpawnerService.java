@@ -3,7 +3,7 @@ package com.example.konecranes.application;
 import com.example.konecranes.application.port.in.VehicleSpawnUseCase;
 import com.example.konecranes.application.port.out.VehicleProcessHandle;
 import com.example.konecranes.application.port.out.VehicleProcessLauncherPort;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.config.SimulationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,15 +31,15 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
     private static final long PROCESS_TERMINATION_TIMEOUT_MILLIS = 3000L;
 
     private final SimulationProperties properties;
-    private final VehicleStateStore vehicleStateStore;
+    private final VehicleStateRepository vehicleStateRepository;
     private final VehicleProcessLauncherPort processLauncher;
     private final Map<String, VehicleProcessHandle> spawnedProcesses = new ConcurrentHashMap<>();
 
     public VehicleSpawnerService(SimulationProperties properties,
-                                 VehicleStateStore vehicleStateStore,
+                                 VehicleStateRepository vehicleStateRepository,
                                  VehicleProcessLauncherPort processLauncher) {
         this.properties = properties;
-        this.vehicleStateStore = vehicleStateStore;
+        this.vehicleStateRepository = vehicleStateRepository;
         this.processLauncher = processLauncher;
     }
 
@@ -137,7 +137,7 @@ public class VehicleSpawnerService implements VehicleSpawnUseCase {
      * @return selected spawn position
      */
     private SpawnPosition findSafeSpawnPosition() {
-        List<SpawnPosition> existingPositions = vehicleStateStore.findAll().stream()
+        List<SpawnPosition> existingPositions = vehicleStateRepository.findAll().stream()
                 .map(v -> new SpawnPosition(v.getX(), v.getY()))
                 .collect(Collectors.toList());
 

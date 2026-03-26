@@ -1,7 +1,7 @@
 package com.example.konecranes.adapter.out.persistence;
 
 import com.example.konecranes.model.VehicleState;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>All reads and writes use defensive copies to avoid shared mutable state.</p>
  */
 @Repository
-public class VehicleRegistry implements VehicleStateStore {
+public class InMemoryVehicleStateRepository implements VehicleStateRepository {
 
     private final Map<String, VehicleState> vehicles = new ConcurrentHashMap<>();
 

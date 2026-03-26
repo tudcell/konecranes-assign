@@ -1,4 +1,4 @@
-package com.example.konecranes.model;
+package com.example.konecranes.messaging;
 
 /**
  * Wire protocol message types exchanged between coordinator and vehicle processes.

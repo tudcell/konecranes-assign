@@ -2,7 +2,7 @@ package com.example.konecranes.application;
 
 import com.example.konecranes.application.port.out.VehicleProcessHandle;
 import com.example.konecranes.application.port.out.VehicleProcessLauncherPort;
-import com.example.konecranes.application.port.out.VehicleStateStore;
+import com.example.konecranes.application.port.out.VehicleStateRepository;
 import com.example.konecranes.config.SimulationProperties;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +36,7 @@ class VehicleSpawnerServiceTest {
         properties.getVehicle().setReconnectInitialBackoffMillis(600L);
         properties.getVehicle().setReconnectMaxBackoffMillis(4200L);
 
-        VehicleStateStore stateStore = mock(VehicleStateStore.class);
+        VehicleStateRepository stateStore = mock(VehicleStateRepository.class);
         when(stateStore.findAll()).thenReturn(Collections.emptyList());
 
         VehicleProcessHandle processHandle = mock(VehicleProcessHandle.class);
@@ -69,7 +69,7 @@ class VehicleSpawnerServiceTest {
         properties.getVehicle().setDefaultSpeed(60.0);
         properties.getVehicle().setTickMillis(100L);
 
-        VehicleStateStore stateStore = mock(VehicleStateStore.class);
+        VehicleStateRepository stateStore = mock(VehicleStateRepository.class);
         when(stateStore.findAll()).thenReturn(Collections.emptyList());
 
         VehicleProcessHandle processHandle = mock(VehicleProcessHandle.class);
