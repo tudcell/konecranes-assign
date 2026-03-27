@@ -1,5 +1,7 @@
 package com.example.konecranes.vehicle;
 
+import lombok.Getter;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,36 +10,67 @@ import java.util.Map;
  *
  * <p>Values are parsed from command line arguments provided by the coordinator.</p>
  */
+@Getter
 public class VehicleProcessConfig {
+
     private String vehicleId;
+
     private String gatewayHost;
+
     private int gatewayPort;
+
     private double worldWidth;
+
     private double worldHeight;
+
     private double initialX;
+
     private double initialY;
+
     private double initialDirectionDeg;
+
     private double initialSpeed;
+
     private long tickMillis;
+
     private final double radius = 16.0;
+
     private double maxTurnDegPerTick = 8.0;
+
     private long manualOverrideHoldMillis = 2000L;
+
     private double aiTurnDeltaDeg = 8.0;
+
     private double aiSlowDownFactor = 0.90;
+
     private double aiRecoveryFactor = 1.08;
+
     private int aiPredictionSteps = 20;
+
     private double aiPredictionStepSeconds = 0.1;
+
     private double aiKeepCourseRiskThreshold = 0.12;
+
     private double safetyEmergencyMargin = 3.0;
+
     private double safetyEmergencyLookaheadSeconds = 0.08;
+
     private double safetyHardStopFactor = 0.25;
+
     private double safetySoftBrakeFactor = 0.80;
+
     private double safetySoftBrakeMinimumSpeed = 20.0;
+
     private double stuckDistanceThreshold = 1.0;
+
     private long stuckTimeMillis = 2000L;
+
     private double stuckEscapeSpeedFactor = 1.5;
+
     private int reconnectMaxAttempts = 8;
+
     private long reconnectInitialBackoffMillis = 500L;
+
     private long reconnectMaxBackoffMillis = 5000L;
 
     /**
@@ -91,64 +124,4 @@ public class VehicleProcessConfig {
         return config;
     }
 
-    /** @return vehicle identifier */
-    public String getVehicleId() { return vehicleId; }
-    /** @return gateway host for TCP connection */
-    public String getGatewayHost() { return gatewayHost; }
-    /** @return gateway port for TCP connection */
-    public int getGatewayPort() { return gatewayPort; }
-    /** @return simulation world width */
-    public double getWorldWidth() { return worldWidth; }
-    /** @return simulation world height */
-    public double getWorldHeight() { return worldHeight; }
-    /** @return initial X coordinate */
-    public double getInitialX() { return initialX; }
-    /** @return initial Y coordinate */
-    public double getInitialY() { return initialY; }
-    /** @return initial heading in degrees */
-    public double getInitialDirectionDeg() { return initialDirectionDeg; }
-    /** @return initial speed */
-    public double getInitialSpeed() { return initialSpeed; }
-    /** @return movement tick interval in milliseconds */
-    public long getTickMillis() { return tickMillis; }
-    /** @return collision radius (fixed at 16.0 units) */
-    public double getRadius() { return radius; }
-    /** @return maximum turn degrees per tick */
-    public double getMaxTurnDegPerTick() { return maxTurnDegPerTick; }
-    /** @return manual override hold duration in milliseconds */
-    public long getManualOverrideHoldMillis() { return manualOverrideHoldMillis; }
-    /** @return AI turn delta in degrees for steering decisions */
-    public double getAiTurnDeltaDeg() { return aiTurnDeltaDeg; }
-    /** @return AI slow-down speed multiplier */
-    public double getAiSlowDownFactor() { return aiSlowDownFactor; }
-    /** @return AI speed recovery multiplier */
-    public double getAiRecoveryFactor() { return aiRecoveryFactor; }
-    /** @return AI prediction steps for lookahead */
-    public int getAiPredictionSteps() { return aiPredictionSteps; }
-    /** @return AI prediction time per step in seconds */
-    public double getAiPredictionStepSeconds() { return aiPredictionStepSeconds; }
-    /** @return AI threshold below which to keep course */
-    public double getAiKeepCourseRiskThreshold() { return aiKeepCourseRiskThreshold; }
-    /** @return safety emergency guard margin in units */
-    public double getSafetyEmergencyMargin() { return safetyEmergencyMargin; }
-    /** @return safety collision lookahead in seconds */
-    public double getSafetyEmergencyLookaheadSeconds() { return safetyEmergencyLookaheadSeconds; }
-    /** @return hard stop speed reduction factor */
-    public double getSafetyHardStopFactor() { return safetyHardStopFactor; }
-    /** @return soft brake speed reduction factor */
-    public double getSafetySoftBrakeFactor() { return safetySoftBrakeFactor; }
-    /** @return minimum speed for soft brake application */
-    public double getSafetySoftBrakeMinimumSpeed() { return safetySoftBrakeMinimumSpeed; }
-    /** @return stuck vehicle distance threshold in units */
-    public double getStuckDistanceThreshold() { return stuckDistanceThreshold; }
-    /** @return stuck vehicle timeout in milliseconds */
-    public long getStuckTimeMillis() { return stuckTimeMillis; }
-    /** @return stuck escape speed boost factor */
-    public double getStuckEscapeSpeedFactor() { return stuckEscapeSpeedFactor; }
-    /** @return maximum reconnect attempts before exit */
-    public int getReconnectMaxAttempts() { return reconnectMaxAttempts; }
-    /** @return initial reconnect backoff in milliseconds */
-    public long getReconnectInitialBackoffMillis() { return reconnectInitialBackoffMillis; }
-    /** @return maximum reconnect backoff in milliseconds */
-    public long getReconnectMaxBackoffMillis() { return reconnectMaxBackoffMillis; }
 }

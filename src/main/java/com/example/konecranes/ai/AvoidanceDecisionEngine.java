@@ -3,10 +3,11 @@ package com.example.konecranes.ai;
 import com.example.konecranes.model.AvoidanceAction;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.VehicleState;
+import lombok.Getter;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Selects the lowest-risk maneuver from a small set of candidate actions.
@@ -33,12 +34,11 @@ public class AvoidanceDecisionEngine {
             return new DecisionResult(AvoidanceAction.KEEP_COURSE, 0.0, RiskLevel.LOW);
         }
 
-        Candidate best = Arrays.asList(
+        Candidate best = Stream.of(
                         candidate(self, nearbyVehicles, AvoidanceAction.KEEP_COURSE, 0.0, 1.0),
                         candidate(self, nearbyVehicles, AvoidanceAction.TURN_LEFT, -8.0, 1.0),
                         candidate(self, nearbyVehicles, AvoidanceAction.TURN_RIGHT, 8.0, 1.0),
                         candidate(self, nearbyVehicles, AvoidanceAction.SLOW_DOWN, 0.0, 0.82))
-                .stream()
                 .min(Comparator.comparingDouble(Candidate::getScore))
                 .orElseThrow(IllegalStateException::new);
 
@@ -81,6 +81,7 @@ public class AvoidanceDecisionEngine {
         return normalized < 0.0 ? normalized + 360.0 : normalized;
     }
 
+    @Getter
     private static class Candidate {
         private final AvoidanceAction action;
         private final double score;
@@ -90,21 +91,24 @@ public class AvoidanceDecisionEngine {
             this.score = score;
         }
 
-        public AvoidanceAction getAction() {
-            return action;
-        }
-
-        public double getScore() {
-            return score;
-        }
     }
 
     /**
      * Decision payload returned by {@link #choose(VehicleState, List)}.
      */
+    @Getter
     public static class DecisionResult {
+        /**
+         * @return chosen maneuver
+         */
         private final AvoidanceAction action;
+        /**
+         * @return aggregated risk score
+         */
         private final double riskScore;
+        /**
+         * @return risk level bucket
+         */
         private final RiskLevel riskLevel;
 
         /**
@@ -118,19 +122,5 @@ public class AvoidanceDecisionEngine {
             this.riskLevel = riskLevel;
         }
 
-        /** @return chosen maneuver */
-        public AvoidanceAction getAction() {
-            return action;
-        }
-
-        /** @return aggregated risk score */
-        public double getRiskScore() {
-            return riskScore;
-        }
-
-        /** @return risk level bucket */
-        public RiskLevel getRiskLevel() {
-            return riskLevel;
-        }
     }
 }

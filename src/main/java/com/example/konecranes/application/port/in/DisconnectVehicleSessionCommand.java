@@ -1,22 +1,18 @@
 package com.example.konecranes.application.port.in;
 
+import lombok.Getter;
+
 /**
  * Command that identifies which vehicle session disconnected.
  */
+@Getter
 public class DisconnectVehicleSessionCommand {
-    private final String vehicleId;
-
     /**
-     * @param vehicleId unique vehicle identifier
+     * vehicleId unique vehicle identifier
      */
+    private final String vehicleId;
     public DisconnectVehicleSessionCommand(String vehicleId) {
         this.vehicleId = vehicleId;
     }
 
-    /**
-     * @return disconnected vehicle id
-     */
-    public String getVehicleId() {
-        return vehicleId;
-    }
 }

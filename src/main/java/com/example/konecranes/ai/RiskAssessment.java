@@ -1,12 +1,20 @@
 package com.example.konecranes.ai;
 
 import com.example.konecranes.model.RiskLevel;
+import lombok.Getter;
 
 /**
  * Value object containing numeric and categorical collision risk outputs.
  */
+@Getter
 public class RiskAssessment {
+    /**
+     * @return normalized risk score
+     */
     private final double riskScore;
+    /**
+     * @return coarse risk level
+     */
     private final RiskLevel riskLevel;
 
     /**
@@ -18,13 +26,4 @@ public class RiskAssessment {
         this.riskLevel = riskLevel;
     }
 
-    /** @return normalized risk score */
-    public double getRiskScore() {
-        return riskScore;
-    }
-
-    /** @return coarse risk level */
-    public RiskLevel getRiskLevel() {
-        return riskLevel;
-    }
 }

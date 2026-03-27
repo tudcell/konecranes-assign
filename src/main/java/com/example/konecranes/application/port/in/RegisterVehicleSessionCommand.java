@@ -1,14 +1,23 @@
 package com.example.konecranes.application.port.in;
 
+import lombok.Getter;
+
 /**
  * Input command used to register a newly connected vehicle.
  */
+@Getter
 public class RegisterVehicleSessionCommand {
+
     private final String vehicleId;
+
     private final double initialX;
+
     private final double initialY;
+
     private final double initialDirectionDeg;
+
     private final double initialSpeed;
+
     private final double radius;
 
     /**
@@ -33,33 +42,4 @@ public class RegisterVehicleSessionCommand {
         this.radius = radius;
     }
 
-    /** @return vehicle identifier */
-    public String getVehicleId() {
-        return vehicleId;
-    }
-
-    /** @return initial X coordinate */
-    public double getInitialX() {
-        return initialX;
-    }
-
-    /** @return initial Y coordinate */
-    public double getInitialY() {
-        return initialY;
-    }
-
-    /** @return initial heading in degrees */
-    public double getInitialDirectionDeg() {
-        return initialDirectionDeg;
-    }
-
-    /** @return initial speed */
-    public double getInitialSpeed() {
-        return initialSpeed;
-    }
-
-    /** @return collision radius */
-    public double getRadius() {
-        return radius;
-    }
 }

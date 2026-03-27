@@ -3,20 +3,32 @@ package com.example.konecranes.application.port.in;
 import com.example.konecranes.model.AvoidanceAction;
 import com.example.konecranes.model.RiskLevel;
 import com.example.konecranes.model.VehicleStatus;
+import lombok.Getter;
 
 /**
  * Input command containing one full vehicle state update.
  */
+@Getter
 public class UpdateVehicleStateCommand {
+
     private final String vehicleId;
+
     private final double x;
+
     private final double y;
+
     private final double directionDeg;
+
     private final double speed;
+
     private final double radius;
+
     private final VehicleStatus status;
+
     private final AvoidanceAction currentAction;
+
     private final RiskLevel riskLevel;
+
     private final double currentRiskScore;
 
     /**
@@ -53,53 +65,4 @@ public class UpdateVehicleStateCommand {
         this.currentRiskScore = currentRiskScore;
     }
 
-    /** @return vehicle identifier */
-    public String getVehicleId() {
-        return vehicleId;
-    }
-
-    /** @return X coordinate */
-    public double getX() {
-        return x;
-    }
-
-    /** @return Y coordinate */
-    public double getY() {
-        return y;
-    }
-
-    /** @return heading in degrees */
-    public double getDirectionDeg() {
-        return directionDeg;
-    }
-
-    /** @return speed */
-    public double getSpeed() {
-        return speed;
-    }
-
-    /** @return collision radius */
-    public double getRadius() {
-        return radius;
-    }
-
-    /** @return lifecycle status */
-    public VehicleStatus getStatus() {
-        return status;
-    }
-
-    /** @return current action */
-    public AvoidanceAction getCurrentAction() {
-        return currentAction;
-    }
-
-    /** @return risk level */
-    public RiskLevel getRiskLevel() {
-        return riskLevel;
-    }
-
-    /** @return continuous risk score */
-    public double getCurrentRiskScore() {
-        return currentRiskScore;
-    }
 }

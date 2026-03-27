@@ -2,6 +2,8 @@ package com.example.konecranes.adapter.in.rest;
 
 import com.example.konecranes.application.port.in.VehicleControlUseCase;
 import com.example.konecranes.application.port.in.VehicleSpawnUseCase;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -80,26 +82,30 @@ public class VehicleController {
     /**
      * Input payload for spawn requests.
      */
+    @Setter
+    @Getter
     public static class SpawnRequest {
+        /**
+         *
+         * -- SETTER --
+         *
+         @return number of vehicles to spawn
+          * @param count number of vehicles to spawn
+         */
         @Min(1)
         @Max(25)
         private int count;
 
-        /** @return number of vehicles to spawn */
-        public int getCount() {
-            return count;
-        }
-
-        /** @param count number of vehicles to spawn */
-        public void setCount(int count) {
-            this.count = count;
-        }
     }
 
     /**
      * Output payload containing created vehicle ids.
      */
+    @Getter
     public static class SpawnResponse {
+        /**
+         * @return spawned vehicle identifiers
+         */
         private final List<String> vehicleIds;
 
         /**
@@ -109,48 +115,44 @@ public class VehicleController {
             this.vehicleIds = vehicleIds;
         }
 
-        /** @return spawned vehicle identifiers */
-        public List<String> getVehicleIds() {
-            return vehicleIds;
-        }
     }
 
     /**
      * Input payload for direction override.
      */
+    @Setter
+    @Getter
     public static class DirectionCommand {
+        /**
+         *
+         * -- SETTER --
+         *
+         @return desired direction in degrees
+          * @param directionDeg desired direction in degrees
+         */
         @NotNull
         @DecimalMin("0.0")
         @DecimalMax("359.99")
         private Double directionDeg;
 
-        /** @return desired direction in degrees */
-        public Double getDirectionDeg() {
-            return directionDeg;
-        }
-
-        /** @param directionDeg desired direction in degrees */
-        public void setDirectionDeg(Double directionDeg) {
-            this.directionDeg = directionDeg;
-        }
     }
 
     /**
      * Input payload for speed override.
      */
+    @Setter
+    @Getter
     public static class SpeedCommand {
+        /**
+         *
+         * -- SETTER --
+         *
+         @return desired speed
+          * @param speed desired speed
+         */
         @NotNull
         @DecimalMin("0.0")
         private Double speed;
 
-        /** @return desired speed */
-        public Double getSpeed() {
-            return speed;
-        }
-
-        /** @param speed desired speed */
-        public void setSpeed(Double speed) {
-            this.speed = speed;
-        }
     }
 }
