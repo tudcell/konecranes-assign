@@ -11,6 +11,8 @@ import java.util.function.DoubleConsumer;
  * Normal steering adjustments should be handled by the control/AI layer.
  */
 public class VehicleSafetyEngine {
+            private static final double HARD_STOP_EXTRA_MARGIN = 0.5;
+            private static final double SOFT_BRAKE_EXTRA_MARGIN = 10.0;
     private final VehicleProcessConfig config;
 
     public VehicleSafetyEngine(VehicleProcessConfig config) {
@@ -63,8 +65,8 @@ public class VehicleSafetyEngine {
         double dx = state.getX() - threat.getX();
         double dy = state.getY() - threat.getY();
         double separation = distance(state.getX(), state.getY(), threat.getX(), threat.getY());
-        double hardStopDistance = state.getRadius() + threat.getRadius() + 0.5;
-        double softBrakeDistance = state.getRadius() + threat.getRadius() + 10.0;
+        double hardStopDistance = state.getRadius() + threat.getRadius() + HARD_STOP_EXTRA_MARGIN;
+        double softBrakeDistance = state.getRadius() + threat.getRadius() + SOFT_BRAKE_EXTRA_MARGIN;
 
         double escapeHeading = Math.toDegrees(Math.atan2(dy, dx));
 

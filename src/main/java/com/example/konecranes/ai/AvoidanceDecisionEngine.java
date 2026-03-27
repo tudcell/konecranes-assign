@@ -12,7 +12,21 @@ import java.util.stream.Stream;
 /**
  * Selects the lowest-risk maneuver from a small set of candidate actions.
  */
+
 public class AvoidanceDecisionEngine {
+    // Maneuver penalties (not meant to be configured externally)
+    private static final double PENALTY_TURN = 0.04;
+    private static final double PENALTY_SLOW_DOWN = 0.03;
+    private static final double PENALTY_EMERGENCY_STOP = 0.08;
+
+    // Direction deltas (should match config if configurable)
+    private static final double DELTA_TURN_LEFT = -8.0; // If made configurable, use config.getAiTurnDeltaDeg()
+    private static final double DELTA_TURN_RIGHT = 8.0;
+
+    // Speed factors (should match config if configurable)
+    private static final double FACTOR_KEEP_COURSE = 1.0;
+    private static final double FACTOR_TURN = 1.0;
+    private static final double FACTOR_SLOW_DOWN = 0.82; // If made configurable, use config.getAiSlowDownFactor()
 
     private final RiskEstimator riskEstimator;
     private final double keepCourseRiskThreshold;
@@ -35,10 +49,10 @@ public class AvoidanceDecisionEngine {
         }
 
         Candidate best = Stream.of(
-                        candidate(self, nearbyVehicles, AvoidanceAction.KEEP_COURSE, 0.0, 1.0),
-                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_LEFT, -8.0, 1.0),
-                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_RIGHT, 8.0, 1.0),
-                        candidate(self, nearbyVehicles, AvoidanceAction.SLOW_DOWN, 0.0, 0.82))
+                        candidate(self, nearbyVehicles, AvoidanceAction.KEEP_COURSE, 0.0, FACTOR_KEEP_COURSE),
+                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_LEFT, DELTA_TURN_LEFT, FACTOR_TURN),
+                        candidate(self, nearbyVehicles, AvoidanceAction.TURN_RIGHT, DELTA_TURN_RIGHT, FACTOR_TURN),
+                        candidate(self, nearbyVehicles, AvoidanceAction.SLOW_DOWN, 0.0, FACTOR_SLOW_DOWN))
                 .min(Comparator.comparingDouble(Candidate::getScore))
                 .orElseThrow(IllegalStateException::new);
 
@@ -66,11 +80,11 @@ public class AvoidanceDecisionEngine {
         switch (action) {
             case TURN_LEFT:
             case TURN_RIGHT:
-                return 0.04;
+                return PENALTY_TURN;
             case SLOW_DOWN:
-                return 0.03;
+                return PENALTY_SLOW_DOWN;
             case EMERGENCY_STOP:
-                return 0.08;
+                return PENALTY_EMERGENCY_STOP;
             default:
                 return 0.0;
         }

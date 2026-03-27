@@ -8,7 +8,17 @@ import java.util.List;
 /**
  * Estimates collision risk for a vehicle against nearby traffic.
  */
+
 public class RiskEstimator {
+    // Risk calculation constants (not meant to be configured externally)
+    private static final double DANGER_DISTANCE_MARGIN = 18.0;
+    private static final double RELATIVE_SPEED_FACTOR = 0.10;
+    private static final double PROXIMITY_SAFE_MAX = 220.0;
+    private static final double FUTURE_SAFE_MAX = 180.0;
+
+    // Risk level thresholds
+    private static final double RISK_LEVEL_HIGH = 0.82;
+    private static final double RISK_LEVEL_MEDIUM = 0.50;
 
     private final int predictionSteps;
     private final double dtSeconds;
@@ -50,9 +60,9 @@ public class RiskEstimator {
         double intersectionFactor = headingConvergence(a, b);
         double relativeSpeed = Math.abs(a.getSpeed() - b.getSpeed());
 
-        double dangerDistance = a.getRadius() + b.getRadius() + 18.0 + (relativeSpeed * 0.10);
-        double proximityScore = inverseNormalize(distanceNow, dangerDistance, 220.0);
-        double futureScore = inverseNormalize(minPredictedDistance, dangerDistance, 180.0);
+        double dangerDistance = a.getRadius() + b.getRadius() + DANGER_DISTANCE_MARGIN + (relativeSpeed * RELATIVE_SPEED_FACTOR);
+        double proximityScore = inverseNormalize(distanceNow, dangerDistance, PROXIMITY_SAFE_MAX);
+        double futureScore = inverseNormalize(minPredictedDistance, dangerDistance, FUTURE_SAFE_MAX);
 
         double risk = 0.30 * proximityScore
                 + 0.40 * futureScore
@@ -69,10 +79,10 @@ public class RiskEstimator {
      * @return coarse risk level
      */
     private RiskLevel toLevel(double score) {
-        if (score >= 0.82) {
+        if (score >= RISK_LEVEL_HIGH) {
             return RiskLevel.HIGH;
         }
-        if (score >= 0.50) {
+        if (score >= RISK_LEVEL_MEDIUM) {
             return RiskLevel.MEDIUM;
         }
         return RiskLevel.LOW;

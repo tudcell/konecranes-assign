@@ -13,6 +13,12 @@ public class VehicleMotionEngine {
     private final VehicleProcessConfig config;
     private final AtomicLong targetDirectionDegTimes100 = new AtomicLong(0L);
 
+    // Magic numbers extracted as constants
+    private static final double REVERSE_ANGLE_DEG = 180.0;
+    private static final double FULL_CIRCLE_DEG = 360.0;
+    private static final double DEGREE_SCALE = 100.0;
+    private static final double SIGNED_DELTA_MIN = -180.0;
+
     public VehicleMotionEngine(VehicleProcessConfig config, double initialDirectionDeg) {
         this.config = config;
         setTargetDirection(initialDirectionDeg);
@@ -42,21 +48,21 @@ public class VehicleMotionEngine {
 
         if (state.getX() <= radius) {
             state.setX(radius);
-            state.setDirectionDeg(normalizeDirection(180.0 - state.getDirectionDeg()));
+            state.setDirectionDeg(normalizeDirection(REVERSE_ANGLE_DEG - state.getDirectionDeg()));
             bounced = true;
         } else if (state.getX() >= config.getWorldWidth() - radius) {
             state.setX(config.getWorldWidth() - radius);
-            state.setDirectionDeg(normalizeDirection(180.0 - state.getDirectionDeg()));
+            state.setDirectionDeg(normalizeDirection(REVERSE_ANGLE_DEG - state.getDirectionDeg()));
             bounced = true;
         }
 
         if (state.getY() <= radius) {
             state.setY(radius);
-            state.setDirectionDeg(normalizeDirection(360.0 - state.getDirectionDeg()));
+            state.setDirectionDeg(normalizeDirection(FULL_CIRCLE_DEG - state.getDirectionDeg()));
             bounced = true;
         } else if (state.getY() >= config.getWorldHeight() - radius) {
             state.setY(config.getWorldHeight() - radius);
-            state.setDirectionDeg(normalizeDirection(360.0 - state.getDirectionDeg()));
+            state.setDirectionDeg(normalizeDirection(FULL_CIRCLE_DEG - state.getDirectionDeg()));
             bounced = true;
         }
 
@@ -76,7 +82,7 @@ public class VehicleMotionEngine {
      * @param direction desired heading in degrees
      */
     public void setTargetDirection(double direction) {
-        long scaled = Math.round(normalizeDirection(direction) * 100.0);
+        long scaled = Math.round(normalizeDirection(direction) * DEGREE_SCALE);
         targetDirectionDegTimes100.set(scaled);
     }
 
@@ -84,7 +90,7 @@ public class VehicleMotionEngine {
      * @return target heading in degrees
      */
     public double getTargetDirection() {
-        return targetDirectionDegTimes100.get() / 100.0;
+        return targetDirectionDegTimes100.get() / DEGREE_SCALE;
     }
 
     /**
@@ -95,9 +101,9 @@ public class VehicleMotionEngine {
      * @return signed delta in range [-180, 180] degrees
      */
     private double shortestSignedDeltaDeg(double fromDeg, double toDeg) {
-        double delta = (toDeg - fromDeg + 540.0) % 360.0 - 180.0;
-        if (delta == -180.0) {
-            return 180.0;
+        double delta = (toDeg - fromDeg + (REVERSE_ANGLE_DEG + FULL_CIRCLE_DEG)) % FULL_CIRCLE_DEG - REVERSE_ANGLE_DEG;
+        if (delta == SIGNED_DELTA_MIN) {
+            return REVERSE_ANGLE_DEG;
         }
         return delta;
     }
@@ -109,8 +115,8 @@ public class VehicleMotionEngine {
      * @return normalized direction
      */
     private double normalizeDirection(double direction) {
-        double normalized = direction % 360.0;
-        return normalized < 0.0 ? normalized + 360.0 : normalized;
+        double normalized = direction % FULL_CIRCLE_DEG;
+        return normalized < 0.0 ? normalized + FULL_CIRCLE_DEG : normalized;
     }
 }
 

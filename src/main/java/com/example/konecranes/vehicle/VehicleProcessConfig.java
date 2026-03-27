@@ -14,64 +14,35 @@ import java.util.Map;
 public class VehicleProcessConfig {
 
     private String vehicleId;
-
     private String gatewayHost;
-
     private int gatewayPort;
-
     private double worldWidth;
-
     private double worldHeight;
-
     private double initialX;
-
     private double initialY;
-
     private double initialDirectionDeg;
-
     private double initialSpeed;
-
     private long tickMillis;
-
     private final double radius = 16.0;
-
-    private double maxTurnDegPerTick = 8.0;
-
-    private long manualOverrideHoldMillis = 2000L;
-
-    private double aiTurnDeltaDeg = 8.0;
-
-    private double aiSlowDownFactor = 0.90;
-
-    private double aiRecoveryFactor = 1.08;
-
-    private int aiPredictionSteps = 20;
-
-    private double aiPredictionStepSeconds = 0.1;
-
-    private double aiKeepCourseRiskThreshold = 0.12;
-
-    private double safetyEmergencyMargin = 3.0;
-
-    private double safetyEmergencyLookaheadSeconds = 0.08;
-
-    private double safetyHardStopFactor = 0.25;
-
-    private double safetySoftBrakeFactor = 0.80;
-
-    private double safetySoftBrakeMinimumSpeed = 20.0;
-
-    private double stuckDistanceThreshold = 1.0;
-
-    private long stuckTimeMillis = 2000L;
-
-    private double stuckEscapeSpeedFactor = 1.5;
-
-    private int reconnectMaxAttempts = 8;
-
-    private long reconnectInitialBackoffMillis = 500L;
-
-    private long reconnectMaxBackoffMillis = 5000L;
+    private double maxTurnDegPerTick;
+    private long manualOverrideHoldMillis;
+    private double aiTurnDeltaDeg;
+    private double aiSlowDownFactor;
+    private double aiRecoveryFactor;
+    private int aiPredictionSteps;
+    private double aiPredictionStepSeconds;
+    private double aiKeepCourseRiskThreshold;
+    private double safetyEmergencyMargin;
+    private double safetyEmergencyLookaheadSeconds;
+    private double safetyHardStopFactor;
+    private double safetySoftBrakeFactor;
+    private double safetySoftBrakeMinimumSpeed;
+    private double stuckDistanceThreshold;
+    private long stuckTimeMillis;
+    private double stuckEscapeSpeedFactor;
+    private int reconnectMaxAttempts;
+    private long reconnectInitialBackoffMillis;
+    private long reconnectMaxBackoffMillis;
 
     /**
      * Parses command line arguments into a vehicle process configuration.
