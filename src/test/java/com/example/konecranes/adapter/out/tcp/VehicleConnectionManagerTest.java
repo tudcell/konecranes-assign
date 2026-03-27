@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class VehicleConnectionManagerTest {
     @Test
     void dummy() {
-        // TODO: Implement real tests for TcpVehicleGatewayAdapter
+        // TODO: Implement real tests for TcpVehicleMessagingAdapter
         assertTrue(true);
     }
 }

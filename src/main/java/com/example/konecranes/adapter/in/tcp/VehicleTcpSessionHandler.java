@@ -1,15 +1,16 @@
 package com.example.konecranes.adapter.in.tcp;
 
-import com.example.konecranes.adapter.out.tcp.SessionConnectionRegistry;
+import com.example.konecranes.adapter.out.tcp.TcpVehicleSessionChannel;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionCommand;
 import com.example.konecranes.application.port.in.DisconnectVehicleSessionUseCase;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionCommand;
 import com.example.konecranes.application.port.in.RegisterVehicleSessionUseCase;
 import com.example.konecranes.application.port.in.UpdateVehicleStateCommand;
 import com.example.konecranes.application.port.in.UpdateVehicleStateUseCase;
+import com.example.konecranes.application.port.out.VehicleSessionRegistryPort;
+import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.messaging.WireMessage;
-import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.model.VehicleState;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,38 +29,34 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * TCP inbound adapter that handles one vehicle socket session.
+ * Handles one inbound TCP vehicle session.
  */
 @Service
-public class VehicleSessionHandler {
+public class VehicleTcpSessionHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(VehicleSessionHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(VehicleTcpSessionHandler.class);
 
     private final ObjectMapper objectMapper;
     private final RegisterVehicleSessionUseCase registerVehicleSessionUseCase;
     private final DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase;
     private final UpdateVehicleStateUseCase updateVehicleStateUseCase;
-    private final SessionConnectionRegistry sessionConnectionRegistry;
+    private final VehicleSessionRegistryPort sessionRegistryPort;
 
-    public VehicleSessionHandler(ObjectMapper objectMapper,
-                                 RegisterVehicleSessionUseCase registerVehicleSessionUseCase,
-                                 DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase,
-                                 UpdateVehicleStateUseCase updateVehicleStateUseCase,
-                                 SessionConnectionRegistry sessionConnectionRegistry) {
+    public VehicleTcpSessionHandler(ObjectMapper objectMapper,
+                                    RegisterVehicleSessionUseCase registerVehicleSessionUseCase,
+                                    DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase,
+                                    UpdateVehicleStateUseCase updateVehicleStateUseCase,
+                                    VehicleSessionRegistryPort sessionRegistryPort) {
         this.objectMapper = objectMapper;
         this.registerVehicleSessionUseCase = registerVehicleSessionUseCase;
         this.disconnectVehicleSessionUseCase = disconnectVehicleSessionUseCase;
         this.updateVehicleStateUseCase = updateVehicleStateUseCase;
-        this.sessionConnectionRegistry = sessionConnectionRegistry;
+        this.sessionRegistryPort = sessionRegistryPort;
     }
 
-    /**
-     * Reads line-delimited wire messages from one socket until disconnect.
-     *
-     * @param socket accepted vehicle socket
-     */
     public void handle(Socket socket) {
         String vehicleId = null;
+
         try (Socket ignored = socket;
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
@@ -87,26 +84,18 @@ public class VehicleSessionHandler {
         } catch (IOException ex) {
             String resolvedVehicleId = vehicleId == null ? "unknown" : vehicleId;
             if (isExpectedSocketClose(ex)) {
-                logger.info("Vehicle session closed for {}", resolvedVehicleId);
+                logger.info("Vehicle TCP session closed for {}", resolvedVehicleId);
             } else {
-                logger.warn("Vehicle session I/O failed for {}", resolvedVehicleId, ex);
+                logger.warn("Vehicle TCP session I/O failed for {}", resolvedVehicleId, ex);
             }
         } finally {
             if (vehicleId != null) {
                 disconnectVehicleSessionUseCase.disconnect(new DisconnectVehicleSessionCommand(vehicleId));
-                sessionConnectionRegistry.detach(vehicleId);
+                sessionRegistryPort.detach(vehicleId);
             }
         }
     }
 
-    /**
-     * Dispatches one wire message to the matching application use case.
-     *
-     * @param message parsed wire message
-     * @param writer writer bound to the same socket (used by register flow)
-     * @return resolved vehicle id when available, otherwise null
-     * @throws IOException when downstream transport write fails
-     */
     private String handleMessage(WireMessage message, BufferedWriter writer) throws IOException {
         if (message.getType() == MessageType.REGISTER) {
             return handleRegister(message, writer);
@@ -117,21 +106,19 @@ public class VehicleSessionHandler {
         if (message.getType() == MessageType.DISCONNECT) {
             return handleDisconnect(message);
         }
+
         logger.debug("Ignoring unsupported message type {}", message.getType());
         return null;
     }
 
-    /**
-     * Handles a REGISTER message, persists session, and sends initial handshake data.
-     *
-     * @param message register message payload
-     * @param writer socket writer for later gateway sends
-     * @return registered vehicle id
-     * @throws IOException when register acknowledgement or environment send fails
-     */
     private String handleRegister(WireMessage message, BufferedWriter writer) throws IOException {
         RegisterVehicleRequest request = objectMapper.convertValue(message.getPayload(), RegisterVehicleRequest.class);
-        sessionConnectionRegistry.attach(request.getVehicleId(), writer);
+
+        sessionRegistryPort.attach(
+                request.getVehicleId(),
+                new TcpVehicleSessionChannel(writer, objectMapper)
+        );
+
         try {
             RegisterVehicleSessionCommand command = new RegisterVehicleSessionCommand(
                     request.getVehicleId(),
@@ -139,23 +126,20 @@ public class VehicleSessionHandler {
                     request.getInitialY(),
                     request.getInitialDirectionDeg(),
                     request.getInitialSpeed(),
-                    request.getRadius());
+                    request.getRadius()
+            );
             registerVehicleSessionUseCase.register(command);
         } catch (IOException ex) {
-            sessionConnectionRegistry.detach(request.getVehicleId());
+            sessionRegistryPort.detach(request.getVehicleId());
             throw ex;
         }
+
         return request.getVehicleId();
     }
 
-    /**
-     * Handles one STATE_UPDATE message.
-     *
-     * @param message state update payload
-     * @return vehicle id found in the state payload
-     */
     private String handleStateUpdate(WireMessage message) {
         VehicleState state = objectMapper.convertValue(message.getPayload(), VehicleState.class);
+
         UpdateVehicleStateCommand command = new UpdateVehicleStateCommand(
                 state.getId(),
                 state.getX(),
@@ -166,20 +150,15 @@ public class VehicleSessionHandler {
                 state.getStatus(),
                 state.getCurrentAction(),
                 state.getRiskLevel(),
-                state.getCurrentRiskScore());
+                state.getCurrentRiskScore()
+        );
+
         updateVehicleStateUseCase.updateState(command);
         return state.getId();
     }
 
-    /**
-     * Handles one DISCONNECT message.
-     *
-     * @param message disconnect payload containing vehicle id
-     * @return disconnected vehicle id
-     */
     private String handleDisconnect(WireMessage message) {
-        Map<String, String> payload = objectMapper.convertValue(message.getPayload(), new TypeReference<>() {
-        });
+        Map<String, String> payload = objectMapper.convertValue(message.getPayload(), new TypeReference<>() {});
         return payload.get("vehicleId");
     }
 

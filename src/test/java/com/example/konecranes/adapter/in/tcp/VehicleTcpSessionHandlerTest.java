@@ -3,10 +3,10 @@ package com.example.konecranes.adapter.in.tcp;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class VehicleSessionHandlerTest {
+class VehicleTcpSessionHandlerTest {
     @Test
     void dummy() {
-        // TODO: Implement real tests for VehicleSessionHandler
+        // TODO: Implement real tests for VehicleTcpSessionHandler
         assertTrue(true);
     }
 }

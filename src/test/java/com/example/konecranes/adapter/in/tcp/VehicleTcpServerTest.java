@@ -1,6 +1,6 @@
 package com.example.konecranes.adapter.in.tcp;
 
-import com.example.konecranes.adapter.out.tcp.SessionConnectionRegistry;
+import com.example.konecranes.application.port.out.VehicleSessionRegistryPort;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import java.net.ServerSocket;
@@ -10,7 +10,7 @@ import com.example.konecranes.config.SimulationProperties;
 
 import static org.mockito.Mockito.*;
 
-class VehicleGatewayServerTest {
+class VehicleTcpServerTest {
     @Test
     void startsAndAcceptsConnection() throws Exception {
         // Mock dependencies
@@ -18,22 +18,22 @@ class VehicleGatewayServerTest {
         SimulationProperties.Gateway gateway = new SimulationProperties.Gateway();
         gateway.setPort(12345);
         when(properties.getGateway()).thenReturn(gateway);
-        VehicleSessionHandler handler = mock(VehicleSessionHandler.class);
-        SessionConnectionRegistry registry = mock(SessionConnectionRegistry.class);
+        VehicleTcpSessionHandler handler = mock(VehicleTcpSessionHandler.class);
+        VehicleSessionRegistryPort registry = mock(VehicleSessionRegistryPort.class);
         ServerSocket serverSocket = mock(ServerSocket.class);
         Socket socket = mock(Socket.class);
         when(serverSocket.accept()).thenReturn(socket).thenThrow(new IOException("Stop"));
 
-        VehicleGatewayServer server = new VehicleGatewayServer(properties, handler, registry);
+        VehicleTcpServer server = new VehicleTcpServer(properties, handler, registry);
         server.setServerSocket(serverSocket); // Use the new setter
         // Set running to true for the accept loop
-        java.lang.reflect.Field runningField = VehicleGatewayServer.class.getDeclaredField("running");
+        java.lang.reflect.Field runningField = VehicleTcpServer.class.getDeclaredField("running");
         runningField.setAccessible(true);
         runningField.set(server, new java.util.concurrent.atomic.AtomicBoolean(true));
 
         Thread serverThread = new Thread(() -> {
             try {
-                java.lang.reflect.Method acceptLoop = VehicleGatewayServer.class.getDeclaredMethod("acceptLoop");
+                java.lang.reflect.Method acceptLoop = VehicleTcpServer.class.getDeclaredMethod("acceptLoop");
                 acceptLoop.setAccessible(true);
                 acceptLoop.invoke(server);
             } catch (Exception ignored) {}

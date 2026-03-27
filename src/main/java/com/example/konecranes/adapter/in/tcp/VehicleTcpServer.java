@@ -1,9 +1,10 @@
 package com.example.konecranes.adapter.in.tcp;
 
-import com.example.konecranes.adapter.out.tcp.SessionConnectionRegistry;
-import org.springframework.stereotype.Component;
+import com.example.konecranes.application.port.out.VehicleSessionRegistryPort;
+import com.example.konecranes.config.SimulationProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -16,33 +17,31 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * TCP inbound adapter that accepts vehicle connections and dispatches sessions.
+ * TCP server that accepts vehicle connections and dispatches each session to a handler.
  */
 @Component
-public class VehicleGatewayServer {
+public class VehicleTcpServer {
 
-    private static final Logger logger = LoggerFactory.getLogger(VehicleGatewayServer.class);
+    private static final Logger logger = LoggerFactory.getLogger(VehicleTcpServer.class);
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 3L;
 
     private final int gatewayPort;
-    private final VehicleSessionHandler sessionHandler;
-    private final SessionConnectionRegistry sessionConnectionRegistry;
+    private final VehicleTcpSessionHandler sessionHandler;
+    private final VehicleSessionRegistryPort sessionRegistryPort;
     private final ExecutorService acceptorPool = Executors.newSingleThreadExecutor();
     private final ExecutorService clientPool = Executors.newCachedThreadPool();
     private final AtomicBoolean running = new AtomicBoolean(false);
+
     private ServerSocket serverSocket;
 
-    public VehicleGatewayServer(com.example.konecranes.config.SimulationProperties properties,
-                                VehicleSessionHandler sessionHandler,
-                                SessionConnectionRegistry sessionConnectionRegistry) {
+    public VehicleTcpServer(SimulationProperties properties,
+                            VehicleTcpSessionHandler sessionHandler,
+                            VehicleSessionRegistryPort sessionRegistryPort) {
         this.gatewayPort = properties.getGateway().getPort();
         this.sessionHandler = sessionHandler;
-        this.sessionConnectionRegistry = sessionConnectionRegistry;
+        this.sessionRegistryPort = sessionRegistryPort;
     }
 
-    /**
-     * Opens the server socket and starts accept loop if not already running.
-     */
     @PostConstruct
     public void start() {
         if (!running.compareAndSet(false, true)) {
@@ -53,10 +52,10 @@ public class VehicleGatewayServer {
             serverSocket = new ServerSocket(gatewayPort);
         } catch (IOException ex) {
             running.set(false);
-            throw new IllegalStateException("Failed to open vehicle gateway on port " + gatewayPort, ex);
+            throw new IllegalStateException("Failed to open vehicle TCP server on port " + gatewayPort, ex);
         }
 
-        logger.info("Vehicle gateway started on port {}", gatewayPort);
+        logger.info("Vehicle TCP server started on port {}", gatewayPort);
         acceptorPool.submit(this::acceptLoop);
     }
 
@@ -67,27 +66,24 @@ public class VehicleGatewayServer {
                 clientPool.submit(() -> sessionHandler.handle(clientSocket));
             } catch (IOException ex) {
                 if (running.get()) {
-                    logger.error("Gateway accept loop failed", ex);
+                    logger.error("Vehicle TCP accept loop failed", ex);
                 }
-                // Break the loop after IOException to avoid repeated error logs
                 break;
             }
         }
     }
 
-    /**
-     * Stops accept loop, detaches active sessions, and shuts down executors.
-     */
     @PreDestroy
     public void stop() {
         if (!running.getAndSet(false)) {
             return;
         }
+
         closeServerSocket();
-        sessionConnectionRegistry.detachAll();
-        shutdownExecutor(acceptorPool, "gateway-acceptor");
-        shutdownExecutor(clientPool, "gateway-client");
-        logger.info("Vehicle gateway stopped");
+        sessionRegistryPort.detachAll();
+        shutdownExecutor(acceptorPool, "vehicle-tcp-acceptor");
+        shutdownExecutor(clientPool, "vehicle-tcp-client");
+        logger.info("Vehicle TCP server stopped");
     }
 
     private void closeServerSocket() {
@@ -97,7 +93,7 @@ public class VehicleGatewayServer {
         try {
             serverSocket.close();
         } catch (IOException ex) {
-            logger.warn("Failed to close vehicle gateway socket", ex);
+            logger.warn("Failed to close vehicle TCP server socket", ex);
         }
     }
 
@@ -114,7 +110,7 @@ public class VehicleGatewayServer {
         }
     }
 
-    // Package-private setter for testability
+    // Package-private setter for tests
     void setServerSocket(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
     }

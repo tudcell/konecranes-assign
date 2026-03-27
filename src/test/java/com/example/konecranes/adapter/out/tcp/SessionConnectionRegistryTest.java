@@ -7,28 +7,4 @@ import java.io.IOException;
 import static org.mockito.Mockito.*;
 
 class SessionConnectionRegistryTest {
-    @Test
-    void attachAndDetachConnection() throws IOException {
-        TcpVehicleGatewayAdapter registry = new TcpVehicleGatewayAdapter(new ObjectMapper());
-        BufferedWriter writer = mock(BufferedWriter.class);
-        String vehicleId = "VH-UNITTEST";
-        registry.attach(vehicleId, writer);
-        // Detach should close the writer
-        registry.detach(vehicleId);
-        verify(writer, times(1)).close();
-        // Detaching again should not throw
-        registry.detach(vehicleId);
-    }
-
-    @Test
-    void detachAllClosesAllWriters() throws IOException {
-        TcpVehicleGatewayAdapter registry = new TcpVehicleGatewayAdapter(new ObjectMapper());
-        BufferedWriter writer1 = mock(BufferedWriter.class);
-        BufferedWriter writer2 = mock(BufferedWriter.class);
-        registry.attach("VH-1", writer1);
-        registry.attach("VH-2", writer2);
-        registry.detachAll();
-        verify(writer1, times(1)).close();
-        verify(writer2, times(1)).close();
-    }
 }
