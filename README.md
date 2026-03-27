@@ -1,47 +1,77 @@
 # Konecranes AI Vehicle Simulation
 
-## 1) Run Guide
+A Java 11 simulation system built for the Konecranes assignment.
+
+The application runs a coordinator process plus multiple independently spawned vehicle JVM processes. Vehicles communicate with the coordinator asynchronously over TCP, publish their state continuously, receive environment updates, and apply local AI-based collision avoidance and safety behavior.
+
+---
+
+## Table of contents
+
+- [Run guide](#run-guide)
+- [API examples](#api-examples)
+- [Project description](#project-description)
+- [Functionalities](#functionalities)
+- [User flow](#user-flow)
+- [Wire protocol](#wire-protocol)
+- [Architecture](#architecture)
+- [AI and safety behavior](#ai-and-safety-behavior)
+- [Configuration](#configuration)
+- [Project structure](#project-structure)
+
+---
+
+## Run guide
 
 ### Prerequisites
-- Java 11+
+
+- Java 11 or newer (JDK)
 - Maven
 
 ### Build
+
 ```bash
 mvn clean package
 ```
 
 ### Start the coordinator process
+
 ```bash
 java -jar target/konecranes-ai-sim-1.0.0.jar
 ```
 
-### Or run directly from IDE
-You can also run `ApplicationLauncher` directly (no manual args needed for coordinator mode):
+### Run from the IDE
+
+You can also run the coordinator directly from your IDE.
 
 - Main class: `com.example.konecranes.ApplicationLauncher`
-- Mode selection: default is coordinator; vehicle mode is only used internally with `--mode=vehicle`
+- Coordinator mode is the default. Vehicle mode is internal and used when launching child JVMs with `--mode=vehicle`.
 
 ### Open the web UI
-```text
+
+Open your browser at:
+
+```
 http://localhost:8080
 ```
 
-### Spawn vehicles
-Use the UI controls, or call the API directly:
+---
+
+## API examples
+
+Spawn 3 vehicles:
 
 ```bash
 curl -X POST http://localhost:8080/api/vehicles/spawn \
-  -H 'Content-Type: application/json' \
+  -H "Content-Type: application/json" \
   -d '{"count":3}'
 ```
 
-### Send manual control
 Override direction:
 
 ```bash
 curl -X POST http://localhost:8080/api/vehicles/VH-XXXX/direction \
-  -H 'Content-Type: application/json' \
+  -H "Content-Type: application/json" \
   -d '{"directionDeg":180}'
 ```
 
@@ -49,37 +79,96 @@ Override speed:
 
 ```bash
 curl -X POST http://localhost:8080/api/vehicles/VH-XXXX/speed \
-  -H 'Content-Type: application/json' \
+  -H "Content-Type: application/json" \
   -d '{"speed":30}'
 ```
 
-## 2) Project Description and Functionalities
+Read the current simulation snapshot:
 
-This project is a Java 11 simulation for my Konecranes assignment. It runs one coordinator process and multiple independently spawned vehicle JVM processes that communicate asynchronously over TCP.
+```bash
+curl http://localhost:8080/api/simulation/snapshot
+```
 
-### Core functionalities
-- Spawn 1..N (N=25 currently, but it can be changed) vehicles at runtime from the UI/API
-- Manually control each vehicle direction and speed
-- Visualize live vehicle movement in a browser UI
-- Stream live world snapshots via SSE (`/api/simulation/stream`)
-- Run AI-based collision risk estimation and maneuver selection
+Open the live snapshot stream (SSE):
 
-### Coordinator responsibilities
-- Serves UI and REST APIs
-- Accepts and manages vehicle TCP sessions
-- Stores global vehicle state in registry
-- Broadcasts per-vehicle environment updates
-- Publishes simulation snapshots to SSE subscribers
-- Spawns and owns child vehicle processes
+```
+GET /api/simulation/stream
+```
 
-### Vehicle process responsibilities
-- Performs motion ticks and AI/control ticks
-- Publishes `STATE_UPDATE` messages to coordinator
-- Applies inbound `ENVIRONMENT_UPDATE` and `CONTROL_COMMAND`
-- Handles immediate safety maneuvers locally
+---
 
-### Wire protocol
-Line-delimited JSON `WireMessage{type,payload}` over TCP with message types:
+## Project description
+
+This project is a Java 11 vehicle simulation built for the Konecranes assignment.
+
+The system is split into two runtime roles:
+
+### Coordinator process
+
+The coordinator is the main Spring Boot application. It is responsible for:
+
+- Serving the UI
+- Exposing REST endpoints and SSE
+- Accepting vehicle TCP connections
+- Storing global vehicle state (in-memory registry)
+- Broadcasting per-vehicle environment updates
+- Spawning and managing child vehicle JVM processes
+
+### Vehicle processes
+
+Each vehicle runs as its own JVM process. A vehicle is responsible for:
+
+- Maintaining its own runtime loop (ticks)
+- Applying movement updates locally
+- Receiving environment updates from the coordinator
+- Receiving manual control commands
+- Publishing `STATE_UPDATE` messages to the coordinator
+- Running local AI-based decision logic and doing last-moment safety maneuvers
+
+---
+
+## Functionalities
+
+Core features:
+
+- Spawn multiple vehicles at runtime from the UI or API
+- Manual control of vehicle direction and speed
+- Live browser visualization of vehicle movement
+- Server-Sent Events (SSE) snapshot streaming
+- Local vehicle-side collision risk estimation and maneuver selection
+- Each vehicle runs as an independent JVM process
+- Asynchronous JSON-over-TCP wire protocol between coordinator and vehicles
+
+Manual override behavior:
+
+- Manual control (direction/speed) temporarily takes priority; AI resumes after the manual override window.
+
+---
+
+## User flow
+
+1. User opens the web UI at `http://localhost:8080`.
+2. User spawns one or more vehicles via UI or `POST /api/vehicles/spawn`.
+3. Coordinator launches one child JVM process per vehicle (same jar with `--mode=vehicle` and args).
+4. Each vehicle connects to the TCP gateway and sends a `REGISTER` message.
+5. Coordinator replies with `REGISTER_ACK` and an initial `ENVIRONMENT_UPDATE`.
+6. Vehicles start their local runtime loops (movement tick, AI/control tick, outbound state publish).
+7. Coordinator receives `STATE_UPDATE` messages, updates the registry, and broadcasts environment updates.
+8. Scheduler publishes snapshots; the UI receives them via SSE and re-renders.
+9. User can send manual direction/speed commands; vehicles enter a `USER_OVERRIDE` window before AI resumes.
+
+---
+
+## Wire protocol
+
+Coordinator and vehicles exchange line-delimited JSON `WireMessage` objects over TCP. Each message is structured as:
+
+```json
+{ "type": "REGISTER", "payload": {  } }
+```
+
+Common message types:
+
 - `REGISTER`
 - `REGISTER_ACK`
 - `STATE_UPDATE`
@@ -87,63 +176,74 @@ Line-delimited JSON `WireMessage{type,payload}` over TCP with message types:
 - `CONTROL_COMMAND`
 - `DISCONNECT`
 
-## 3) User Flow
+---
 
-1. User opens UI at `http://localhost:8080`.
-2. User spawns vehicles from UI (or `POST /api/vehicles/spawn`).
-3. Coordinator launches child JVMs (`--mode=vehicle`) for each vehicle.
-4. Each vehicle connects to TCP gateway and sends `REGISTER`.
-5. Coordinator responds with `REGISTER_ACK` + first `ENVIRONMENT_UPDATE`.
-6. Vehicle loops start (movement, AI/control, outbound state publish).
-7. Coordinator receives `STATE_UPDATE`, updates registry, and broadcasts environment.
-8. Scheduler publishes snapshots; UI receives updates through SSE and re-renders.
-9. User sends manual direction/speed commands; vehicle enters `USER_OVERRIDE` window, then AI resumes.
+## Architecture
 
-## 4) Architecture Diagram
+The codebase follows a layered (ports & adapters) structure.
 
-```text
-+----------------------+        +-----------------------------------+
-| User / Browser       |<------>| Static UI (app.js)               |
-+----------------------+        +----------------+------------------+
-                                                 | REST/SSE
-                                                 v
-                          +------------------------------------------+
-                          | adapter.in.rest                          |
-                          | - VehicleController                      |
-                          | - SimulationController                   |
-                          +----------------+-------------------------+
-                                           |
-                                           v
-                          +------------------------------------------+
-                          | application.port.in (Inbound Ports)      |
-                          +----------------+-------------------------+
-                                           |
-                                           v
-                          +------------------------------------------+
-                          | application (Use Cases / Services)       |
-                          | - spawn, command, session, snapshot      |
-                          +----------------+-------------------------+
-                                           |
-                                           v
-                          +------------------------------------------+
-                          | application.port.out (Outbound Ports)    |
-                          +----------------+-------------------------+
-                             |                 |                  |
-                             v                 v                  v
-                  +------------------+  +------------------+  +-------------------+
-                  | adapter.out.     |  | adapter.out.tcp  |  | adapter.out.      |
-                  | persistence      |  | VehicleConnection|  | process           |
-                  | VehicleRegistry  |  | Manager          |  | Jvm...Launcher    |
-                  +------------------+  +---------+--------+  +---------+---------+
-                                               TCP |                     |
-                                                   v                     v
-                                   +---------------------------+   +------------------+
-                                   | adapter.in.tcp            |   | Vehicle JVMs     |
-                                   | VehicleGatewayServer      |<->| vehicle.* (N)    |
-                                   | VehicleSessionHandler     |   | --mode=vehicle   |
-                                   +---------------------------+   +------------------+
+Main layers:
+
+- `adapter.in` — inbound delivery implementations (REST controllers, TCP gateway)
+- `application` / use-cases — orchestration and business logic
+- `application.port.in` — inbound ports (use-case contracts)
+- `application.port.out` — outbound ports (dependency contracts)
+- `adapter.out` — concrete outbound adapters (persistence, TCP messaging, process launcher)
+- `vehicle` — runtime logic executed inside each spawned vehicle JVM
+
+
+## AI and safety behavior
+
+Vehicle-side logic is intentionally simple and explainable.
+
+Decision flow per vehicle:
+
+1. Receive nearby vehicle context
+2. Estimate collision risk (pairwise predictions)
+3. Simulate candidate actions (KEEP_COURSE, TURN_LEFT, TURN_RIGHT, SLOW_DOWN)
+4. Select lowest-risk maneuver using a scoring/penalty system
+5. Apply immediate safety behavior (soft brake or hard stop) if a collision is imminent
+
+The safety engine is a last-moment override that applies braking factors and emergency maneuvers independent of the AI decision when necessary.
+
+---
+
+## Configuration
+
+Runtime settings live in `src/main/resources/application.yml` (namespace: `simulation`). The Spring bean `com.example.konecranes.config.SimulationProperties` binds these values.
+
+Important configuration areas:
+
+- World size (`simulation.world.*`)
+- TCP gateway (`simulation.gateway.*`)
+- Scheduler cadence (`simulation.scheduler.*`)
+- Vehicle defaults and tuning (`simulation.vehicle.*` and `simulation.vehicle.tuning.*`)
+
+**Important**: `simulation.vehicle.jarPath` must point to the packaged application JAR so the coordinator can spawn child vehicle processes.
+
+---
+
+## Project structure
+
+```
+src/main/java/com/example/konecranes
+├── adapter
+│   ├── in
+│   │   ├── rest
+│   │   └── tcp
+│   └── out
+│       ├── persistence
+│       ├── process
+│       └── tcp
+├── application
+│   ├── port
+│   │   ├── in
+│   │   └── out
+├── ai
+├── config
+├── messaging
+├── model
+└── vehicle
 ```
 
-## Notes
-- Runtime knobs are in `src/main/resources/application.yml` (`simulation.*`).
-- `simulation.vehicle.jarPath` must point to the packaged jar so coordinator can spawn vehicles.
+---
