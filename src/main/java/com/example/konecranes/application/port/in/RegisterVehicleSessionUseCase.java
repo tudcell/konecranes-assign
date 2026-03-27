@@ -3,15 +3,23 @@ package com.example.konecranes.application.port.in;
 import java.io.IOException;
 
 /**
- * Handles the initial registration handshake for a vehicle session.
+ * Use case for registering a newly connected vehicle session.
+ *
+ * Handles the initial registration flow after a vehicle
+ * establishes a connection with the coordinator.
  */
 public interface RegisterVehicleSessionUseCase {
 
     /**
-     * Registers a newly connected vehicle and sends initial session data.
+     * Registers a new vehicle session and completes the initial handshake.
      *
-     * @param command registration payload from transport layer
-     * @throws IOException when handshake replies cannot be sent
+     * Typical responsibilities include:
+     * - storing the initial vehicle state
+     * - sending registration acknowledgement
+     * - sending initial environment data
+     *
+     * @param command registration input from the transport layer
+     * @throws IOException when handshake responses cannot be sent
      */
     void register(RegisterVehicleSessionCommand command) throws IOException;
 }

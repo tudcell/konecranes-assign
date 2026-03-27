@@ -5,7 +5,10 @@ import com.example.konecranes.messaging.ControlCommand;
 import java.io.IOException;
 
 /**
- * Outbound gateway port for manual control commands.
+ * Outbound port for sending manual control commands to vehicle processes.
+ *
+ * Used by the application layer when a user overrides
+ * vehicle direction or speed.
  */
 public interface VehicleCommandGatewayPort {
 
@@ -13,8 +16,8 @@ public interface VehicleCommandGatewayPort {
      * Sends one control command to a vehicle process.
      *
      * @param vehicleId destination vehicle id
-     * @param command direction/speed override payload
-     * @throws IOException when transport write fails
+     * @param command manual control command
+     * @throws IOException when transport delivery fails
      */
     void sendControlCommand(String vehicleId, ControlCommand command) throws IOException;
 }

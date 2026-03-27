@@ -8,19 +8,24 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 
 /**
- * Application service that maps manual control use cases to gateway commands.
+ * Application service that translates manual control actions
+ * into outbound vehicle control commands.
  */
 @Service
 public class VehicleControlService implements VehicleControlUseCase {
 
-    private final VehicleCommandGatewayPort commandGatewayPort;
+    private final VehicleCommandGatewayPort vehicleCommandGatewayPort;
 
-    public VehicleControlService(VehicleCommandGatewayPort commandGatewayPort) {
-        this.commandGatewayPort = commandGatewayPort;
+    public VehicleControlService(VehicleCommandGatewayPort vehicleCommandGatewayPort) {
+        this.vehicleCommandGatewayPort = vehicleCommandGatewayPort;
     }
 
     /**
-     * {@inheritDoc}
+     * Sends a manual direction override to one vehicle.
+     *
+     * @param vehicleId target vehicle id
+     * @param directionDeg desired direction in degrees
+     * @throws IOException when command delivery fails
      */
     @Override
     public void overrideDirection(String vehicleId, double directionDeg) throws IOException {
@@ -28,11 +33,16 @@ public class VehicleControlService implements VehicleControlUseCase {
         command.setVehicleId(vehicleId);
         command.setOverrideDirectionDeg(directionDeg);
         command.setManualOverride(true);
-        commandGatewayPort.sendControlCommand(vehicleId, command);
+
+        vehicleCommandGatewayPort.sendControlCommand(vehicleId, command);
     }
 
     /**
-     * {@inheritDoc}
+     * Sends a manual speed override to one vehicle.
+     *
+     * @param vehicleId target vehicle id
+     * @param speed desired speed
+     * @throws IOException when command delivery fails
      */
     @Override
     public void overrideSpeed(String vehicleId, double speed) throws IOException {
@@ -40,6 +50,7 @@ public class VehicleControlService implements VehicleControlUseCase {
         command.setVehicleId(vehicleId);
         command.setOverrideSpeed(speed);
         command.setManualOverride(true);
-        commandGatewayPort.sendControlCommand(vehicleId, command);
+
+        vehicleCommandGatewayPort.sendControlCommand(vehicleId, command);
     }
 }

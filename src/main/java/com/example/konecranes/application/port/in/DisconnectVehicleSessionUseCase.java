@@ -1,14 +1,17 @@
 package com.example.konecranes.application.port.in;
 
 /**
- * Handles vehicle session termination events.
+ * Use case for handling a disconnected vehicle session.
+ *
+ * Defines the operation needed by the application layer
+ * to mark a vehicle session as disconnected.
  */
 public interface DisconnectVehicleSessionUseCase {
 
     /**
-     * Marks the vehicle session as disconnected.
+     * Disconnects one vehicle session.
      *
-     * @param command payload containing the vehicle identifier
+     * @param command command containing the vehicle id
      */
     void disconnect(DisconnectVehicleSessionCommand command);
 }

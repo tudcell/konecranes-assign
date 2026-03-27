@@ -1,9 +1,9 @@
 package com.example.konecranes.application;
 
-import com.example.konecranes.model.SimulationSnapshot;
 import com.example.konecranes.application.port.in.SimulationSnapshotListener;
 import com.example.konecranes.application.port.in.SimulationStreamUseCase;
 import com.example.konecranes.application.port.out.SimulationSnapshotPublisher;
+import com.example.konecranes.model.SimulationSnapshot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -13,57 +13,62 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Application service that manages simulation snapshot subscribers and publishing.
+ * Application service that manages live simulation snapshot subscriptions.
+ *
+ * Also acts as the publisher for new snapshot events.
  */
 @Service
 public class SseSnapshotService implements SimulationStreamUseCase, SimulationSnapshotPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(SseSnapshotService.class);
 
-    private final Map<String, SimulationSnapshotListener> listeners = new ConcurrentHashMap<>();
+    private final Map<String, SimulationSnapshotListener> snapshotListeners = new ConcurrentHashMap<>();
 
     /**
-     * Registers a new snapshot subscriber.
+     * Registers one new snapshot listener.
      *
-     * @param listener callback to invoke for each snapshot
-     * @return generated subscription identifier
+     * @param listener listener to invoke for each published snapshot
+     * @return generated subscription id
      */
     @Override
     public String subscribe(SimulationSnapshotListener listener) {
         String subscriptionId = UUID.randomUUID().toString();
-        listeners.put(subscriptionId, listener);
+        snapshotListeners.put(subscriptionId, listener);
         return subscriptionId;
     }
 
     /**
-     * Removes a snapshot subscriber.
+     * Removes one existing snapshot listener.
      *
-     * @param subscriptionId subscriber id returned by {@link #subscribe(SimulationSnapshotListener)}
+     * If the subscription id is null or unknown, this method does nothing.
+     *
+     * @param subscriptionId subscription id returned by subscribe
      */
     @Override
     public void unsubscribe(String subscriptionId) {
         if (subscriptionId == null) {
             return;
         }
-        listeners.remove(subscriptionId);
+        snapshotListeners.remove(subscriptionId);
     }
 
     /**
-     * Publishes one snapshot to all current subscribers.
+     * Publishes one simulation snapshot to all current listeners.
      *
-     * @param snapshot snapshot payload
+     * If one listener fails, that listener is removed so it does not
+     * continue breaking future publish cycles.
+     *
+     * @param snapshot snapshot to publish
      */
     @Override
     public void publish(SimulationSnapshot snapshot) {
-        for (Map.Entry<String, SimulationSnapshotListener> entry : listeners.entrySet()) {
+        for (Map.Entry<String, SimulationSnapshotListener> entry : snapshotListeners.entrySet()) {
             try {
                 entry.getValue().onSnapshot(snapshot);
             } catch (Exception ex) {
-                // Defer removal to avoid ConcurrentModificationException
-                listeners.remove(entry.getKey());
+                snapshotListeners.remove(entry.getKey());
                 logger.warn("Removed failed stream subscriber {} due to: {}", entry.getKey(), ex.getMessage());
             }
         }
     }
 }
-

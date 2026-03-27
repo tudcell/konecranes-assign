@@ -10,23 +10,27 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Selects the lowest-risk maneuver from a small set of candidate actions.
+ * Chooses the lowest-risk maneuver from a small set of candidate actions.
+ *
+ * The engine compares a few simple action scenarios and selects
+ * the one with the lowest predicted total risk.
  */
-
 public class AvoidanceDecisionEngine {
-    // Maneuver penalties (not meant to be configured externally)
+
+    // Small penalties used to avoid unnecessary maneuvering
+    // when multiple actions have very similar risk.
     private static final double PENALTY_TURN = 0.04;
     private static final double PENALTY_SLOW_DOWN = 0.03;
     private static final double PENALTY_EMERGENCY_STOP = 0.08;
 
-    // Direction deltas (should match config if configurable)
-    private static final double DELTA_TURN_LEFT = -8.0; // If made configurable, use config.getAiTurnDeltaDeg()
+    // Candidate direction deltas used when simulating turns.
+    private static final double DELTA_TURN_LEFT = -8.0;
     private static final double DELTA_TURN_RIGHT = 8.0;
 
-    // Speed factors (should match config if configurable)
+    // Candidate speed multipliers used when simulating actions.
     private static final double FACTOR_KEEP_COURSE = 1.0;
     private static final double FACTOR_TURN = 1.0;
-    private static final double FACTOR_SLOW_DOWN = 0.82; // If made configurable, use config.getAiSlowDownFactor()
+    private static final double FACTOR_SLOW_DOWN = 0.82;
 
     private final RiskEstimator riskEstimator;
     private final double keepCourseRiskThreshold;
@@ -37,11 +41,15 @@ public class AvoidanceDecisionEngine {
     }
 
     /**
-     * Chooses a control action for the current vehicle state and nearby context.
+     * Chooses a control action for the current vehicle state.
      *
-     * @param self current vehicle snapshot
-     * @param nearbyVehicles nearby vehicle snapshots
-     * @return selected action plus risk metadata
+     * If the current risk is below the keep-course threshold,
+     * the engine keeps the current maneuver even if another
+     * simulated action is slightly safer.
+     *
+     * @param self current vehicle state
+     * @param nearbyVehicles nearby vehicle states
+     * @return selected action and current risk information
      */
     public DecisionResult choose(VehicleState self, List<VehicleState> nearbyVehicles) {
         if (nearbyVehicles.isEmpty()) {
@@ -57,25 +65,54 @@ public class AvoidanceDecisionEngine {
                 .orElseThrow(IllegalStateException::new);
 
         RiskAssessment current = riskEstimator.assess(self, nearbyVehicles);
-        AvoidanceAction action = current.getRiskScore() < keepCourseRiskThreshold ? AvoidanceAction.KEEP_COURSE : best.getAction();
+        AvoidanceAction action =
+                current.getRiskScore() < keepCourseRiskThreshold
+                        ? AvoidanceAction.KEEP_COURSE
+                        : best.getAction();
+
         return new DecisionResult(action, current.getRiskScore(), current.getRiskLevel());
     }
 
-    private Candidate candidate(VehicleState self, List<VehicleState> nearbyVehicles, AvoidanceAction action,
-                                double directionDelta, double speedFactor) {
+    /**
+     * Builds one candidate scenario by applying a direction and speed change
+     * to a copy of the current state, then scoring its total pairwise risk.
+     *
+     * @param self current vehicle state
+     * @param nearbyVehicles nearby vehicle states
+     * @param action candidate action being tested
+     * @param directionDelta direction adjustment in degrees
+     * @param speedFactor speed multiplier
+     * @return scored candidate action
+     */
+    private Candidate candidate(VehicleState self,
+                                List<VehicleState> nearbyVehicles,
+                                AvoidanceAction action,
+                                double directionDelta,
+                                double speedFactor) {
         VehicleState scenario = self.copy();
         scenario.setDirectionDeg(normalize(scenario.getDirectionDeg() + directionDelta));
         scenario.setSpeed(Math.max(0.0, scenario.getSpeed() * speedFactor));
+
         double totalRisk = 0.0;
         for (VehicleState other : nearbyVehicles) {
             if (!scenario.getId().equals(other.getId())) {
                 totalRisk += riskEstimator.pairwiseRisk(scenario, other);
             }
         }
+
         totalRisk += maneuverPenalty(action);
         return new Candidate(action, totalRisk);
     }
 
+    /**
+     * Returns a small penalty for disruptive actions.
+     *
+     * This helps prefer simpler maneuvers when two choices
+     * have nearly identical predicted risk.
+     *
+     * @param action candidate action
+     * @return maneuver penalty
+     */
     private double maneuverPenalty(AvoidanceAction action) {
         switch (action) {
             case TURN_LEFT:
@@ -90,11 +127,20 @@ public class AvoidanceDecisionEngine {
         }
     }
 
+    /**
+     * Normalizes an angle into the range [0, 360).
+     *
+     * @param value angle in degrees
+     * @return normalized angle
+     */
     private double normalize(double value) {
         double normalized = value % 360.0;
         return normalized < 0.0 ? normalized + 360.0 : normalized;
     }
 
+    /**
+     * Internal candidate result used during action comparison.
+     */
     @Getter
     private static class Candidate {
         private final AvoidanceAction action;
@@ -104,37 +150,23 @@ public class AvoidanceDecisionEngine {
             this.action = action;
             this.score = score;
         }
-
     }
 
     /**
-     * Decision payload returned by {@link #choose(VehicleState, List)}.
+     * Result returned by the decision engine.
+     *
+     * Contains the chosen action plus the current risk assessment.
      */
     @Getter
     public static class DecisionResult {
-        /**
-         * @return chosen maneuver
-         */
         private final AvoidanceAction action;
-        /**
-         * @return aggregated risk score
-         */
         private final double riskScore;
-        /**
-         * @return risk level bucket
-         */
         private final RiskLevel riskLevel;
 
-        /**
-         * @param action chosen maneuver
-         * @param riskScore current aggregated risk score
-         * @param riskLevel current risk level bucket
-         */
         public DecisionResult(AvoidanceAction action, double riskScore, RiskLevel riskLevel) {
             this.action = action;
             this.riskScore = riskScore;
             this.riskLevel = riskLevel;
         }
-
     }
 }

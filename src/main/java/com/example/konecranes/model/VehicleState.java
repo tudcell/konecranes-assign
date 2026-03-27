@@ -4,38 +4,34 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Mutable vehicle state snapshot exchanged between coordinator and vehicle process.
+ * Mutable snapshot of one vehicle state.
+ *
+ * Used to exchange the latest vehicle data between
+ * the coordinator and vehicle processes.
  */
 @Getter
 @Setter
 public class VehicleState {
 
     private String id;
-
     private double x;
-
     private double y;
-
     private double directionDeg;
-
     private double speed;
-
     private double radius;
-
     private long timestamp;
-
     private VehicleStatus status = VehicleStatus.ACTIVE;
-
     private AvoidanceAction currentAction = AvoidanceAction.KEEP_COURSE;
-
     private RiskLevel riskLevel = RiskLevel.LOW;
-
     private double currentRiskScore;
 
     /**
-     * Creates a deep-enough copy for safe cross-thread/cross-layer use.
+     * Creates a detached copy of this vehicle state.
      *
-     * @return detached state copy
+     * Used to avoid sharing the same mutable instance
+     * across threads or layers.
+     *
+     * @return copied vehicle state
      */
     public VehicleState copy() {
         VehicleState copy = new VehicleState();
@@ -52,5 +48,4 @@ public class VehicleState {
         copy.currentRiskScore = this.currentRiskScore;
         return copy;
     }
-
 }

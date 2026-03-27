@@ -2,9 +2,9 @@ package com.example.konecranes.vehicle;
 
 import com.example.konecranes.messaging.ControlCommand;
 import com.example.konecranes.messaging.EnvironmentUpdate;
+import com.example.konecranes.messaging.MessageType;
 import com.example.konecranes.messaging.RegisterVehicleRequest;
 import com.example.konecranes.messaging.WireMessage;
-import com.example.konecranes.messaging.MessageType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,100 +26,151 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Runtime loop for a spawned vehicle process.
+ * Runtime loop for one spawned vehicle process.
  *
- * <p>Responsibilities include TCP session lifecycle, periodic AI/movement ticks,
- * outbound state publishing, and bounded reconnect attempts.</p>
+ * Responsible for:
+ * - opening and maintaining the TCP session
+ * - starting periodic movement and AI ticks
+ * - publishing state updates
+ * - reconnecting when the connection is lost
  */
 public class VehicleProcessRuntime {
 
     private static final Logger logger = LoggerFactory.getLogger(VehicleProcessRuntime.class);
 
-    private final VehicleProcessConfig config;
-    private final VehicleBehaviorEngine behaviorEngine;
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final BlockingQueue<WireMessage> outboundQueue = new LinkedBlockingQueue<>();
+    private final VehicleProcessConfig vehicleProcessConfig;
+    private final VehicleBehaviorEngine vehicleBehaviorEngine;
+    private final ObjectMapper jsonMapper = new ObjectMapper();
+    private final BlockingQueue<WireMessage> outboundMessageQueue = new LinkedBlockingQueue<>();
 
-    public VehicleProcessRuntime(VehicleProcessConfig config) {
-        this.config = config;
-        this.behaviorEngine = new VehicleBehaviorEngine(config);
+    public VehicleProcessRuntime(VehicleProcessConfig vehicleProcessConfig) {
+        this.vehicleProcessConfig = vehicleProcessConfig;
+        this.vehicleBehaviorEngine = new VehicleBehaviorEngine(vehicleProcessConfig);
     }
 
     /**
-     * Starts the runtime loop and keeps reconnecting until limits are reached.
+     * Starts the vehicle runtime loop.
+     *
+     * Reconnects until the configured reconnect limit is reached
+     * or the current thread is interrupted.
      */
     public void start() {
         int reconnectAttempt = 0;
+
         while (!Thread.currentThread().isInterrupted()) {
-            SessionOutcome outcome = runSingleSession();
-            if (outcome == SessionOutcome.DISCONNECTED_AFTER_CONNECT) {
+            SessionOutcome sessionOutcome = runSingleSession();
+
+            if (sessionOutcome == SessionOutcome.DISCONNECTED_AFTER_CONNECT) {
                 reconnectAttempt = 0;
             }
 
-            if (reconnectAttempt >= config.getReconnectMaxAttempts()) {
-                logger.warn("Vehicle {} reached reconnect limit ({}). Exiting process.",
-                        config.getVehicleId(), config.getReconnectMaxAttempts());
+            if (reconnectAttempt >= vehicleProcessConfig.getReconnectMaxAttempts()) {
+                logger.warn(
+                        "Vehicle {} reached reconnect limit ({}). Exiting process.",
+                        vehicleProcessConfig.getVehicleId(),
+                        vehicleProcessConfig.getReconnectMaxAttempts()
+                );
                 return;
             }
 
-            long backoffMillis = computeBackoffMillis(reconnectAttempt);
+            long reconnectBackoffMillis = computeBackoffMillis(reconnectAttempt);
             reconnectAttempt++;
-            if (!sleepBeforeReconnect(backoffMillis)) {
+
+            if (!sleepBeforeReconnect(reconnectBackoffMillis)) {
                 return;
             }
-            logger.info("Vehicle {} reconnecting now (attempt {}/{})",
-                    config.getVehicleId(),
+
+            logger.info(
+                    "Vehicle {} reconnecting now (attempt {}/{})",
+                    vehicleProcessConfig.getVehicleId(),
                     reconnectAttempt,
-                    config.getReconnectMaxAttempts());
+                    vehicleProcessConfig.getReconnectMaxAttempts()
+            );
         }
     }
 
     /**
-     * Runs one full socket session from connect until disconnect.
+     * Runs one full TCP session from connect until disconnect.
      *
-     * @return session outcome used by reconnect policy
+     * Creates:
+     * - one writer thread for outbound messages
+     * - one scheduled executor for movement, AI, and state publishing
+     *
+     * @return session outcome used by reconnect logic
      */
     private SessionOutcome runSingleSession() {
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(3);
+        ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(3);
         Thread writerThread = null;
-        AtomicBoolean running = new AtomicBoolean(true);
-        AtomicReference<Exception> writerFailure = new AtomicReference<>();
-        outboundQueue.clear();
-        try (Socket socket = new Socket(config.getGatewayHost(), config.getGatewayPort());
+        AtomicBoolean sessionRunning = new AtomicBoolean(true);
+        AtomicReference<Exception> writerFailureRef = new AtomicReference<>();
+
+        outboundMessageQueue.clear();
+
+        try (Socket socket = new Socket(vehicleProcessConfig.getGatewayHost(), vehicleProcessConfig.getGatewayPort());
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
 
             register();
-            writerThread = new Thread(() -> writerLoop(writer, socket, running, writerFailure), "vehicle-writer-" + config.getVehicleId());
+
+            writerThread = new Thread(
+                    () -> writerLoop(writer, socket, sessionRunning, writerFailureRef),
+                    "vehicle-writer-" + vehicleProcessConfig.getVehicleId()
+            );
             writerThread.setDaemon(true);
             writerThread.start();
 
-            long aiTickMillis = config.getTickMillis() > 0 ? Math.max(config.getTickMillis(), 50L) : 150L;
-            executor.scheduleAtFixedRate(behaviorEngine::movementTick, 0L, config.getTickMillis(), TimeUnit.MILLISECONDS);
-            executor.scheduleAtFixedRate(behaviorEngine::aiTick, 0L, aiTickMillis, TimeUnit.MILLISECONDS);
-            executor.scheduleAtFixedRate(this::publishState, 0L, config.getTickMillis(), TimeUnit.MILLISECONDS);
+            long aiTickMillis = vehicleProcessConfig.getTickMillis() > 0
+                    ? Math.max(vehicleProcessConfig.getTickMillis(), 50L)
+                    : 150L;
 
-            String line;
-            while (running.get() && (line = reader.readLine()) != null) {
-                handleIncoming(line);
+            scheduledExecutor.scheduleAtFixedRate(
+                    vehicleBehaviorEngine::movementTick,
+                    0L,
+                    vehicleProcessConfig.getTickMillis(),
+                    TimeUnit.MILLISECONDS
+            );
+            scheduledExecutor.scheduleAtFixedRate(
+                    vehicleBehaviorEngine::aiTick,
+                    0L,
+                    aiTickMillis,
+                    TimeUnit.MILLISECONDS
+            );
+            scheduledExecutor.scheduleAtFixedRate(
+                    this::publishState,
+                    0L,
+                    vehicleProcessConfig.getTickMillis(),
+                    TimeUnit.MILLISECONDS
+            );
+
+            String incomingLine;
+            while (sessionRunning.get() && (incomingLine = reader.readLine()) != null) {
+                handleIncoming(incomingLine);
             }
 
-            if (writerFailure.get() != null) {
-                logger.warn("Vehicle {} writer loop failed; reconnecting", config.getVehicleId(), writerFailure.get());
+            if (writerFailureRef.get() != null) {
+                logger.warn(
+                        "Vehicle {} writer loop failed; reconnecting",
+                        vehicleProcessConfig.getVehicleId(),
+                        writerFailureRef.get()
+                );
                 return SessionOutcome.DISCONNECTED_AFTER_CONNECT;
             }
 
-            logger.info("Vehicle {} connection closed by gateway", config.getVehicleId());
+            logger.info("Vehicle {} connection closed by gateway", vehicleProcessConfig.getVehicleId());
             return SessionOutcome.DISCONNECTED_AFTER_CONNECT;
+
         } catch (SocketException ex) {
-            logger.info("Vehicle {} connection reset; reconnecting", config.getVehicleId());
+            logger.info("Vehicle {} connection reset; reconnecting", vehicleProcessConfig.getVehicleId());
             return SessionOutcome.CONNECT_FAILURE;
+
         } catch (IOException ex) {
-            logger.warn("Vehicle {} I/O failure; reconnecting", config.getVehicleId(), ex);
+            logger.warn("Vehicle {} I/O failure; reconnecting", vehicleProcessConfig.getVehicleId(), ex);
             return SessionOutcome.CONNECT_FAILURE;
+
         } finally {
-            running.set(false);
-            executor.shutdownNow();
+            sessionRunning.set(false);
+            scheduledExecutor.shutdownNow();
+
             if (writerThread != null) {
                 writerThread.interrupt();
             }
@@ -127,88 +178,116 @@ public class VehicleProcessRuntime {
     }
 
     /**
-     * Enqueues REGISTER message sent as the first packet on a new connection.
+     * Enqueues the initial REGISTER message for a new connection.
      */
     private void register() {
-        RegisterVehicleRequest request = new RegisterVehicleRequest();
-        request.setVehicleId(config.getVehicleId());
-        request.setInitialX(config.getInitialX());
-        request.setInitialY(config.getInitialY());
-        request.setInitialDirectionDeg(config.getInitialDirectionDeg());
-        request.setInitialSpeed(config.getInitialSpeed());
-        request.setRadius(config.getRadius());
-        outboundQueue.add(new WireMessage(MessageType.REGISTER, request));
+        RegisterVehicleRequest registerVehicleRequest = new RegisterVehicleRequest();
+        registerVehicleRequest.setVehicleId(vehicleProcessConfig.getVehicleId());
+        registerVehicleRequest.setInitialX(vehicleProcessConfig.getInitialX());
+        registerVehicleRequest.setInitialY(vehicleProcessConfig.getInitialY());
+        registerVehicleRequest.setInitialDirectionDeg(vehicleProcessConfig.getInitialDirectionDeg());
+        registerVehicleRequest.setInitialSpeed(vehicleProcessConfig.getInitialSpeed());
+        registerVehicleRequest.setRadius(vehicleProcessConfig.getRadius());
+
+        outboundMessageQueue.add(new WireMessage(MessageType.REGISTER, registerVehicleRequest));
     }
 
     /**
-     * Writes outbound messages from queue to socket until shutdown.
+     * Writes outbound messages from the queue to the socket.
+     *
+     * Stops when:
+     * - runtime is no longer running
+     * - the thread is interrupted
+     * - socket writing fails
+     *
+     * On write failure, the socket is closed to unblock the reader side.
      *
      * @param writer socket writer
-     * @param socket socket to close on writer failure
-     * @param running shared runtime flag
-     * @param writerFailure holder for first writer exception
+     * @param socket socket associated with the writer
+     * @param sessionRunning shared running flag
+     * @param writerFailureRef stores the first write failure
      */
     private void writerLoop(BufferedWriter writer,
                             Socket socket,
-                            AtomicBoolean running,
-                            AtomicReference<Exception> writerFailure) {
+                            AtomicBoolean sessionRunning,
+                            AtomicReference<Exception> writerFailureRef) {
         try {
-            while (running.get() && !Thread.currentThread().isInterrupted()) {
-                WireMessage message = outboundQueue.poll(250L, TimeUnit.MILLISECONDS);
-                if (message == null) {
+            while (sessionRunning.get() && !Thread.currentThread().isInterrupted()) {
+                WireMessage wireMessage = outboundMessageQueue.poll(250L, TimeUnit.MILLISECONDS);
+                if (wireMessage == null) {
                     continue;
                 }
-                writer.write(objectMapper.writeValueAsString(message));
+
+                writer.write(jsonMapper.writeValueAsString(wireMessage));
                 writer.newLine();
                 writer.flush();
             }
         } catch (InterruptedException ignored) {
             Thread.currentThread().interrupt();
-        } catch (IOException e) {
-            writerFailure.compareAndSet(null, e);
-            running.set(false);
+        } catch (IOException ex) {
+            writerFailureRef.compareAndSet(null, ex);
+            sessionRunning.set(false);
             closeQuietly(socket);
         }
     }
 
     /**
-     * Parses one inbound wire line and dispatches it to behavior engine.
+     * Parses one inbound wire message and dispatches it
+     * to the behavior engine.
      *
-     * @param line JSON wire message
-     * @throws IOException when JSON parsing fails
+     * Supported message types:
+     * - ENVIRONMENT_UPDATE
+     * - CONTROL_COMMAND
+     *
+     * @param incomingLine raw JSON message line
+     * @throws IOException when parsing fails
      */
-    private void handleIncoming(String line) throws IOException {
-        WireMessage message = objectMapper.readValue(line, WireMessage.class);
-        if (message.getType() == MessageType.ENVIRONMENT_UPDATE) {
-            EnvironmentUpdate update = objectMapper.convertValue(message.getPayload(), EnvironmentUpdate.class);
-            behaviorEngine.onEnvironmentUpdate(update);
-        } else if (message.getType() == MessageType.CONTROL_COMMAND) {
-            ControlCommand command = objectMapper.convertValue(message.getPayload(), ControlCommand.class);
-            behaviorEngine.onControlCommand(command);
+    private void handleIncoming(String incomingLine) throws IOException {
+        WireMessage wireMessage = jsonMapper.readValue(incomingLine, WireMessage.class);
+
+        if (wireMessage.getType() == MessageType.ENVIRONMENT_UPDATE) {
+            EnvironmentUpdate environmentUpdate =
+                    jsonMapper.convertValue(wireMessage.getPayload(), EnvironmentUpdate.class);
+            vehicleBehaviorEngine.onEnvironmentUpdate(environmentUpdate);
+        } else if (wireMessage.getType() == MessageType.CONTROL_COMMAND) {
+            ControlCommand controlCommand =
+                    jsonMapper.convertValue(wireMessage.getPayload(), ControlCommand.class);
+            vehicleBehaviorEngine.onControlCommand(controlCommand);
         }
     }
 
     /**
-     * Enqueues one STATE_UPDATE payload from current behavior state.
+     * Enqueues one STATE_UPDATE message using the current vehicle state.
      */
     private void publishState() {
-        outboundQueue.add(new WireMessage(MessageType.STATE_UPDATE, behaviorEngine.currentStateCopy()));
+        outboundMessageQueue.add(new WireMessage(
+                MessageType.STATE_UPDATE,
+                vehicleBehaviorEngine.currentStateCopy()
+        ));
     }
 
     /**
-     * Computes exponential reconnect backoff clamped by configuration.
+     * Computes reconnect backoff using exponential growth
+     * clamped by configured min and max values.
      *
-     * @param reconnectAttempt zero-based reconnect attempt
-     * @return wait time in milliseconds
+     * @param reconnectAttempt zero-based reconnect attempt number
+     * @return backoff time in milliseconds
      */
     private long computeBackoffMillis(int reconnectAttempt) {
-        long initial = Math.max(1L, config.getReconnectInitialBackoffMillis());
-        long max = Math.max(initial, config.getReconnectMaxBackoffMillis());
-        long factor = 1L << Math.min(reconnectAttempt, 20);
-        long backoff = initial * factor;
-        return Math.min(backoff, max);
+        long initialBackoffMillis = Math.max(1L, vehicleProcessConfig.getReconnectInitialBackoffMillis());
+        long maxBackoffMillis = Math.max(initialBackoffMillis, vehicleProcessConfig.getReconnectMaxBackoffMillis());
+        long backoffFactor = 1L << Math.min(reconnectAttempt, 20);
+        long computedBackoffMillis = initialBackoffMillis * backoffFactor;
+        return Math.min(computedBackoffMillis, maxBackoffMillis);
     }
 
+    /**
+     * Closes a socket without throwing.
+     *
+     * Used as best-effort cleanup when writer-side failures occur.
+     *
+     * @param socket socket to close
+     */
     private void closeQuietly(Socket socket) {
         try {
             socket.close();
@@ -217,9 +296,15 @@ public class VehicleProcessRuntime {
         }
     }
 
-    private boolean sleepBeforeReconnect(long backoffMillis) {
+    /**
+     * Sleeps before the next reconnect attempt.
+     *
+     * @param reconnectBackoffMillis sleep duration in milliseconds
+     * @return true when sleep completed normally, false when interrupted
+     */
+    private boolean sleepBeforeReconnect(long reconnectBackoffMillis) {
         try {
-            Thread.sleep(backoffMillis);
+            Thread.sleep(reconnectBackoffMillis);
             return true;
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -227,6 +312,9 @@ public class VehicleProcessRuntime {
         }
     }
 
+    /**
+     * Outcome of one completed session attempt.
+     */
     private enum SessionOutcome {
         CONNECT_FAILURE,
         DISCONNECTED_AFTER_CONNECT

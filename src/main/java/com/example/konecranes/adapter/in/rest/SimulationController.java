@@ -13,54 +13,69 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 
 /**
- * REST adapter exposing simulation read endpoints.
+ * REST controller for reading simulation state.
+ *
+ * Exposes:
+ * - one endpoint for the latest snapshot
+ * - one SSE endpoint for live simulation updates
  */
 @RestController
 @RequestMapping("/api/simulation")
 public class SimulationController {
 
-    private final SimulationQueryUseCase snapshotService;
-    private final SimulationStreamUseCase sseSnapshotService;
+    private final SimulationQueryUseCase simulationQueryUseCase;
+    private final SimulationStreamUseCase simulationStreamUseCase;
     private final SseProperties sseProperties;
 
-    public SimulationController(SimulationQueryUseCase snapshotService,
-                                SimulationStreamUseCase sseSnapshotService,
+    public SimulationController(SimulationQueryUseCase simulationQueryUseCase,
+                                SimulationStreamUseCase simulationStreamUseCase,
                                 SseProperties sseProperties) {
-        this.snapshotService = snapshotService;
-        this.sseSnapshotService = sseSnapshotService;
+        this.simulationQueryUseCase = simulationQueryUseCase;
+        this.simulationStreamUseCase = simulationStreamUseCase;
         this.sseProperties = sseProperties;
     }
 
     /**
      * Returns the current simulation snapshot.
      *
-     * @return current snapshot model
+     * Used by clients that want the latest state immediately
+     * without opening a streaming connection.
+     *
+     * @return current simulation snapshot
      */
     @GetMapping("/snapshot")
     public SimulationSnapshot snapshot() {
-        return snapshotService.currentSnapshot();
+        return simulationQueryUseCase.currentSnapshot();
     }
 
     /**
-     * Opens a Server-Sent Events stream for live snapshots.
+     * Opens a Server-Sent Events stream for live simulation updates.
      *
-     * @return configured SSE emitter subscribed to snapshot events
+     * A new emitter is created for each client connection.
+     * The client is subscribed to snapshot events and automatically
+     * unsubscribed when the connection completes, times out, or fails.
+     *
+     * @return SSE emitter streaming snapshot events
      */
     @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
         SseEmitter emitter = new SseEmitter(sseProperties.getEmitterTimeoutMillis());
-        String subscriptionId = sseSnapshotService.subscribe(snapshot -> {
+
+        String subscriptionId = simulationStreamUseCase.subscribe(snapshot -> {
             try {
                 emitter.send(SseEmitter.event().name("snapshot").data(snapshot));
             } catch (IOException ex) {
-                // Connection lost, will be handled by emitter.onError callback
+                // The client connection is no longer writable.
+                // Unsubscription is handled through the emitter callbacks below.
                 throw new RuntimeException(ex);
             }
         });
 
-        emitter.onCompletion(() -> sseSnapshotService.unsubscribe(subscriptionId));
-        emitter.onTimeout(() -> sseSnapshotService.unsubscribe(subscriptionId));
-        emitter.onError(ex -> sseSnapshotService.unsubscribe(subscriptionId));
+        // Clean up subscription when the client disconnects or the stream ends.
+        emitter.onCompletion(() -> simulationStreamUseCase.unsubscribe(subscriptionId));
+        emitter.onTimeout(() -> simulationStreamUseCase.unsubscribe(subscriptionId));
+        emitter.onError(ex -> simulationStreamUseCase.unsubscribe(subscriptionId));
+
         return emitter;
     }
 }

@@ -22,137 +22,115 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * REST adapter that exposes vehicle spawn and manual control actions.
+ * REST controller for vehicle spawning and manual control actions.
+ *
+ * Exposes endpoints for:
+ * - spawning one or more vehicle processes
+ * - overriding vehicle direction
+ * - overriding vehicle speed
  */
 @RestController
 @RequestMapping("/api/vehicles")
 public class VehicleController {
 
-    private final VehicleSpawnUseCase vehicleSpawnerService;
-    private final VehicleControlUseCase vehicleCommandService;
+    private final VehicleSpawnUseCase vehicleSpawnUseCase;
+    private final VehicleControlUseCase vehicleControlUseCase;
 
-    public VehicleController(VehicleSpawnUseCase vehicleSpawnerService,
-                             VehicleControlUseCase vehicleCommandService) {
-        this.vehicleSpawnerService = vehicleSpawnerService;
-        this.vehicleCommandService = vehicleCommandService;
+    public VehicleController(VehicleSpawnUseCase vehicleSpawnUseCase,
+                             VehicleControlUseCase vehicleControlUseCase) {
+        this.vehicleSpawnUseCase = vehicleSpawnUseCase;
+        this.vehicleControlUseCase = vehicleControlUseCase;
     }
 
     /**
-     * Creates one or more vehicle processes.
+     * Spawns one or more new vehicle processes.
      *
-     * @param request JSON payload containing vehicle count
-     * @return response with created vehicle ids
-     * @throws IOException when spawning fails
+     * @param request request payload containing the number of vehicles to create
+     * @return response containing the ids of created vehicles
+     * @throws IOException when process spawning fails
      */
     @PostMapping("/spawn")
     @ResponseStatus(HttpStatus.CREATED)
     public SpawnResponse spawn(@Valid @RequestBody SpawnRequest request) throws IOException {
-        List<String> vehicleIds = vehicleSpawnerService.spawn(request.getCount());
+        List<String> vehicleIds = vehicleSpawnUseCase.spawn(request.getCount());
         return new SpawnResponse(vehicleIds);
     }
 
     /**
-     * Applies manual direction override to a vehicle.
+     * Applies a manual direction override to one vehicle.
      *
      * @param vehicleId target vehicle id
-     * @param request payload containing desired heading
+     * @param request request payload containing desired direction
      * @throws IOException when command dispatch fails
      */
     @PostMapping("/{vehicleId}/direction")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void overrideDirection(@PathVariable String vehicleId,
                                   @Valid @RequestBody DirectionCommand request) throws IOException {
-        vehicleCommandService.overrideDirection(vehicleId, request.getDirectionDeg());
+        vehicleControlUseCase.overrideDirection(vehicleId, request.getDirectionDeg());
     }
 
     /**
-     * Applies manual speed override to a vehicle.
+     * Applies a manual speed override to one vehicle.
      *
      * @param vehicleId target vehicle id
-     * @param request payload containing desired speed
+     * @param request request payload containing desired speed
      * @throws IOException when command dispatch fails
      */
     @PostMapping("/{vehicleId}/speed")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void overrideSpeed(@PathVariable String vehicleId,
                               @Valid @RequestBody SpeedCommand request) throws IOException {
-        vehicleCommandService.overrideSpeed(vehicleId, request.getSpeed());
+        vehicleControlUseCase.overrideSpeed(vehicleId, request.getSpeed());
     }
 
     /**
-     * Input payload for spawn requests.
+     * Request payload for spawning vehicles.
      */
-    @Setter
     @Getter
+    @Setter
     public static class SpawnRequest {
-        /**
-         *
-         * -- SETTER --
-         *
-         @return number of vehicles to spawn
-          * @param count number of vehicles to spawn
-         */
+
         @Min(1)
         @Max(25)
         private int count;
-
     }
 
     /**
-     * Output payload containing created vehicle ids.
+     * Response payload containing created vehicle ids.
      */
     @Getter
     public static class SpawnResponse {
-        /**
-         * @return spawned vehicle identifiers
-         */
+
         private final List<String> vehicleIds;
 
-        /**
-         * @param vehicleIds spawned vehicle identifiers
-         */
         public SpawnResponse(List<String> vehicleIds) {
             this.vehicleIds = vehicleIds;
         }
-
     }
 
     /**
-     * Input payload for direction override.
+     * Request payload for direction override.
      */
-    @Setter
     @Getter
+    @Setter
     public static class DirectionCommand {
-        /**
-         *
-         * -- SETTER --
-         *
-         @return desired direction in degrees
-          * @param directionDeg desired direction in degrees
-         */
+
         @NotNull
         @DecimalMin("0.0")
         @DecimalMax("359.99")
         private Double directionDeg;
-
     }
 
     /**
-     * Input payload for speed override.
+     * Request payload for speed override.
      */
-    @Setter
     @Getter
+    @Setter
     public static class SpeedCommand {
-        /**
-         *
-         * -- SETTER --
-         *
-         @return desired speed
-          * @param speed desired speed
-         */
+
         @NotNull
         @DecimalMin("0.0")
         private Double speed;
-
     }
 }

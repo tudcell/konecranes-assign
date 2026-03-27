@@ -6,7 +6,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Binds coordinator and vehicle runtime settings from the {@code simulation.*} namespace.
+ * Binds simulation configuration from the simulation.* namespace.
+ *
+ * Groups together:
+ * - world settings
+ * - TCP gateway settings
+ * - scheduler settings
+ * - vehicle runtime settings
  */
 @Getter
 @Component
@@ -19,67 +25,84 @@ public class SimulationProperties {
     private final Vehicle vehicle = new Vehicle();
 
     /**
-     * World size configuration.
+     * World dimension settings used by the simulation.
      */
     @Getter
     @Setter
     public static class World {
         private double width;
         private double height;
-
     }
 
     /**
-     * TCP gateway host/port configuration.
+     * TCP gateway connection settings.
      */
     @Getter
     @Setter
     public static class Gateway {
         private String host;
         private int port;
-
     }
 
     /**
-     * Scheduler cadence configuration.
+     * Scheduler timing settings.
      */
     @Getter
     @Setter
     public static class Scheduler {
         private long fixedDelayMillis = 150L;
-
     }
 
     /**
-     * Vehicle process defaults and reconnect/spawn settings.
+     * Vehicle process settings.
+     *
+     * Includes:
+     * - launch configuration
+     * - spawn rules
+     * - reconnect behavior
+     * - nested tuning parameters
      */
     @Getter
     public static class Vehicle {
         @Setter
         private String jarPath;
+
         @Setter
         private double defaultSpeed;
+
         @Setter
         private long tickMillis;
+
         @Setter
         private double spawnMinDistance = 100.0;
+
         @Setter
         private int spawnMaxAttempts = 50;
+
         @Setter
         private int reconnectMaxAttempts = 8;
+
         @Setter
         private long reconnectInitialBackoffMillis = 500L;
+
         @Setter
         private long reconnectMaxBackoffMillis = 5000L;
-        private final Tuning tuning = new Tuning();
 
+        private final Tuning tuning = new Tuning();
     }
 
     /**
-     * Fine-grained AI, motion, and safety tuning values.
+     * Fine-grained tuning parameters for vehicle behavior.
+     *
+     * Covers:
+     * - turning
+     * - manual override timing
+     * - AI decision behavior
+     * - safety behavior
+     * - stuck recovery behavior
      */
-    @Setter
     @Getter
+    @Setter
     public static class Tuning {
         private double maxTurnDegPerTick = 8.0;
         private long manualOverrideHoldMillis = 2000L;
@@ -97,6 +120,5 @@ public class SimulationProperties {
         private double stuckDistanceThreshold = 1.0;
         private long stuckTimeMillis = 2000L;
         private double stuckEscapeSpeedFactor = 1.5;
-
     }
 }

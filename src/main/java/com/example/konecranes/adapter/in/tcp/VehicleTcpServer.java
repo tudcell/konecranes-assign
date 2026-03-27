@@ -17,7 +17,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * TCP server that accepts vehicle connections and dispatches each session to a handler.
+ * TCP server responsible for accepting vehicle connections
+ * and delegating each connection to the TCP session handler.
  */
 @Component
 public class VehicleTcpServer {
@@ -26,22 +27,27 @@ public class VehicleTcpServer {
     private static final long SHUTDOWN_TIMEOUT_SECONDS = 3L;
 
     private final int gatewayPort;
-    private final VehicleTcpSessionHandler sessionHandler;
-    private final VehicleSessionRegistryPort sessionRegistryPort;
-    private final ExecutorService acceptorPool = Executors.newSingleThreadExecutor();
-    private final ExecutorService clientPool = Executors.newCachedThreadPool();
+    private final VehicleTcpSessionHandler vehicleTcpSessionHandler;
+    private final VehicleSessionRegistryPort vehicleSessionRegistryPort;
+    private final ExecutorService acceptorExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService clientExecutor = Executors.newCachedThreadPool();
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private ServerSocket serverSocket;
 
     public VehicleTcpServer(SimulationProperties properties,
-                            VehicleTcpSessionHandler sessionHandler,
-                            VehicleSessionRegistryPort sessionRegistryPort) {
+                            VehicleTcpSessionHandler vehicleTcpSessionHandler,
+                            VehicleSessionRegistryPort vehicleSessionRegistryPort) {
         this.gatewayPort = properties.getGateway().getPort();
-        this.sessionHandler = sessionHandler;
-        this.sessionRegistryPort = sessionRegistryPort;
+        this.vehicleTcpSessionHandler = vehicleTcpSessionHandler;
+        this.vehicleSessionRegistryPort = vehicleSessionRegistryPort;
     }
 
+    /**
+     * Starts the TCP server and launches the accept loop.
+     *
+     * If the server is already running, this method does nothing.
+     */
     @PostConstruct
     public void start() {
         if (!running.compareAndSet(false, true)) {
@@ -49,21 +55,41 @@ public class VehicleTcpServer {
         }
 
         try {
-            serverSocket = new ServerSocket(gatewayPort);
+            serverSocket = createServerSocket(gatewayPort);
         } catch (IOException ex) {
             running.set(false);
             throw new IllegalStateException("Failed to open vehicle TCP server on port " + gatewayPort, ex);
         }
 
         logger.info("Vehicle TCP server started on port {}", gatewayPort);
-        acceptorPool.submit(this::acceptLoop);
+        acceptorExecutor.submit(this::acceptLoop);
     }
 
+    /**
+     * Factory method used to create the main server socket.
+     *
+     * Extracted for easier testing so socket creation can be stubbed.
+     *
+     * @param port TCP port to bind
+     * @return created server socket
+     * @throws IOException when binding fails
+     */
+    ServerSocket createServerSocket(int port) throws IOException {
+        return new ServerSocket(port);
+    }
+
+    /**
+     * Accepts incoming sockets and hands each connection
+     * to the vehicle TCP session handler.
+     *
+     * Stops when the server is no longer running or
+     * when an I/O failure occurs on the server socket.
+     */
     private void acceptLoop() {
         while (running.get()) {
             try {
                 Socket clientSocket = serverSocket.accept();
-                clientPool.submit(() -> sessionHandler.handle(clientSocket));
+                clientExecutor.submit(() -> vehicleTcpSessionHandler.handle(clientSocket));
             } catch (IOException ex) {
                 if (running.get()) {
                     logger.error("Vehicle TCP accept loop failed", ex);
@@ -73,6 +99,12 @@ public class VehicleTcpServer {
         }
     }
 
+    /**
+     * Stops the TCP server and cleans up active resources.
+     *
+     * This closes the server socket, detaches all active vehicle sessions,
+     * and shuts down both the acceptor and client executors.
+     */
     @PreDestroy
     public void stop() {
         if (!running.getAndSet(false)) {
@@ -80,12 +112,15 @@ public class VehicleTcpServer {
         }
 
         closeServerSocket();
-        sessionRegistryPort.detachAll();
-        shutdownExecutor(acceptorPool, "vehicle-tcp-acceptor");
-        shutdownExecutor(clientPool, "vehicle-tcp-client");
+        vehicleSessionRegistryPort.detachAll();
+        shutdownExecutor(acceptorExecutor, "vehicle-tcp-acceptor");
+        shutdownExecutor(clientExecutor, "vehicle-tcp-client");
         logger.info("Vehicle TCP server stopped");
     }
 
+    /**
+     * Closes the main server socket if it is still open.
+     */
     private void closeServerSocket() {
         if (serverSocket == null || serverSocket.isClosed()) {
             return;
@@ -97,6 +132,13 @@ public class VehicleTcpServer {
         }
     }
 
+    /**
+     * Shuts down one executor gracefully and forces shutdown
+     * if it does not terminate within the configured timeout.
+     *
+     * @param executor executor to stop
+     * @param executorName log-friendly executor name
+     */
     private void shutdownExecutor(ExecutorService executor, String executorName) {
         executor.shutdown();
         try {
@@ -110,7 +152,7 @@ public class VehicleTcpServer {
         }
     }
 
-    // Package-private setter for tests
+    // Package-private setter used by tests.
     void setServerSocket(ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
     }

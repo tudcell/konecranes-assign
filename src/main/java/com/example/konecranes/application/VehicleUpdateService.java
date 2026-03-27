@@ -10,7 +10,11 @@ import com.example.konecranes.model.VehicleStatus;
 import org.springframework.stereotype.Service;
 
 /**
- * Application service that persists incoming vehicle state updates.
+ * Application service that stores the latest vehicle state updates.
+ *
+ * Accepts state updates from the application boundary,
+ * maps them into the domain state model,
+ * and persists the latest version in the repository.
  */
 @Service
 public class VehicleUpdateService implements UpdateVehicleStateUseCase {
@@ -22,33 +26,40 @@ public class VehicleUpdateService implements UpdateVehicleStateUseCase {
     }
 
     /**
-     * Persists one already-built domain state and refreshes timestamp.
+     * Stores one already-built vehicle state and refreshes its timestamp.
      *
-     * @param state vehicle state to store
+     * @param vehicleState vehicle state to persist
      */
-    public void updateState(VehicleState state) {
-        state.setTimestamp(System.currentTimeMillis());
-        vehicleStateRepository.upsert(state);
+    public void updateState(VehicleState vehicleState) {
+        vehicleState.setTimestamp(System.currentTimeMillis());
+        vehicleStateRepository.upsert(vehicleState);
     }
 
     /**
-     * Maps a transport command into domain model and persists it.
+     * Converts one update command into a vehicle state
+     * and persists the result.
      *
-     * @param command incoming state command
+     * Missing nullable fields are replaced with default values:
+     * - status -> ACTIVE
+     * - currentAction -> KEEP_COURSE
+     * - riskLevel -> LOW
+     *
+     * @param updateVehicleStateCommand incoming vehicle state update
      */
     @Override
-    public void updateState(UpdateVehicleStateCommand command) {
+    public void updateState(UpdateVehicleStateCommand updateVehicleStateCommand) {
         VehicleState state = new VehicleState();
-        state.setId(command.getVehicleId());
-        state.setX(command.getX());
-        state.setY(command.getY());
-        state.setDirectionDeg(command.getDirectionDeg());
-        state.setSpeed(command.getSpeed());
-        state.setRadius(command.getRadius());
-        state.setStatus(command.getStatus() == null ? VehicleStatus.ACTIVE : command.getStatus());
-        state.setCurrentAction(command.getCurrentAction() == null ? AvoidanceAction.KEEP_COURSE : command.getCurrentAction());
-        state.setRiskLevel(command.getRiskLevel() == null ? RiskLevel.LOW : command.getRiskLevel());
-        state.setCurrentRiskScore(command.getCurrentRiskScore());
+        state.setId(updateVehicleStateCommand.getVehicleId());
+        state.setX(updateVehicleStateCommand.getX());
+        state.setY(updateVehicleStateCommand.getY());
+        state.setDirectionDeg(updateVehicleStateCommand.getDirectionDeg());
+        state.setSpeed(updateVehicleStateCommand.getSpeed());
+        state.setRadius(updateVehicleStateCommand.getRadius());
+        state.setStatus(updateVehicleStateCommand.getStatus() == null ? VehicleStatus.ACTIVE : updateVehicleStateCommand.getStatus());
+        state.setCurrentAction(updateVehicleStateCommand.getCurrentAction() == null ? AvoidanceAction.KEEP_COURSE : updateVehicleStateCommand.getCurrentAction());
+        state.setRiskLevel(updateVehicleStateCommand.getRiskLevel() == null ? RiskLevel.LOW : updateVehicleStateCommand.getRiskLevel());
+        state.setCurrentRiskScore(updateVehicleStateCommand.getCurrentRiskScore());
+
         updateState(state);
     }
 }

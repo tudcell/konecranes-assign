@@ -1,22 +1,25 @@
 package com.example.konecranes.application.port.in;
 
 /**
- * Manages live simulation snapshot subscriptions.
+ * Use case for managing live simulation snapshot subscriptions.
+ *
+ * Allows clients to subscribe to simulation updates
+ * and later remove their subscription.
  */
 public interface SimulationStreamUseCase {
 
     /**
      * Registers one listener for snapshot events.
      *
-     * @param listener callback invoked for every emitted snapshot
-     * @return subscription id used to later unsubscribe
+     * @param listener listener invoked for each emitted snapshot
+     * @return subscription id used for later unsubscription
      */
     String subscribe(SimulationSnapshotListener listener);
 
     /**
-     * Removes an existing snapshot subscription.
+     * Removes a previously registered snapshot subscription.
      *
-     * @param subscriptionId id returned by {@link #subscribe(SimulationSnapshotListener)}
+     * @param subscriptionId subscription id returned by subscribe
      */
     void unsubscribe(String subscriptionId);
 }

@@ -7,45 +7,59 @@ import com.example.konecranes.model.VehicleStatus;
 import java.util.function.DoubleConsumer;
 
 /**
- * Handles only last-moment collision prevention.
- * Normal steering adjustments should be handled by the control/AI layer.
+ * Handles last-moment collision prevention.
+ *
+ * This engine is only responsible for immediate safety reactions.
+ * Normal steering and route adjustments belong to the control policy layer.
  */
 public class VehicleSafetyEngine {
-            private static final double HARD_STOP_EXTRA_MARGIN = 0.5;
-            private static final double SOFT_BRAKE_EXTRA_MARGIN = 10.0;
-    private final VehicleProcessConfig config;
 
-    public VehicleSafetyEngine(VehicleProcessConfig config) {
-        this.config = config;
+    private static final double HARD_STOP_EXTRA_MARGIN = 0.5;
+    private static final double SOFT_BRAKE_EXTRA_MARGIN = 10.0;
+
+    private final VehicleProcessConfig vehicleProcessConfig;
+
+    public VehicleSafetyEngine(VehicleProcessConfig vehicleProcessConfig) {
+        this.vehicleProcessConfig = vehicleProcessConfig;
     }
 
     /**
-     * Detects the nearest immediate collision threat for the next movement step.
+     * Finds the nearest immediate collision threat for the next movement step.
      *
-     * @param state current self state
-     * @param nearbyVehicles latest nearby vehicles
-     * @param nextX predicted next X position
-     * @param nextY predicted next Y position
-     * @return nearest threatening vehicle or null when no immediate threat is found
+     * @param currentState current vehicle state
+     * @param nearbyVehicles latest nearby vehicle states
+     * @param nextX predicted next x position
+     * @param nextY predicted next y position
+     * @return nearest threatening vehicle, or null when no immediate threat exists
      */
-    public VehicleState findImmediateThreat(VehicleState state,
+    public VehicleState findImmediateThreat(VehicleState currentState,
                                             Iterable<VehicleState> nearbyVehicles,
                                             double nextX,
                                             double nextY) {
         VehicleState nearestThreat = null;
         double nearestDistance = Double.MAX_VALUE;
 
-        for (VehicleState other : nearbyVehicles) {
-            if (other == null || state.getId().equals(other.getId())) {
+        for (VehicleState nearbyVehicle : nearbyVehicles) {
+            if (nearbyVehicle == null || currentState.getId().equals(nearbyVehicle.getId())) {
                 continue;
             }
 
-            double nowDistance = distance(state.getX(), state.getY(), other.getX(), other.getY());
-            double emergencyDistance = state.getRadius() + other.getRadius() + config.getSafetyEmergencyMargin();
+            double currentDistance = distance(
+                    currentState.getX(),
+                    currentState.getY(),
+                    nearbyVehicle.getX(),
+                    nearbyVehicle.getY()
+            );
 
-            if (nowDistance < nearestDistance && isEmergencyLikely(state, other, nextX, nextY, emergencyDistance)) {
-                nearestDistance = nowDistance;
-                nearestThreat = other;
+            double emergencyDistance =
+                    currentState.getRadius()
+                            + nearbyVehicle.getRadius()
+                            + vehicleProcessConfig.getSafetyEmergencyMargin();
+
+            if (currentDistance < nearestDistance
+                    && isEmergencyLikely(currentState, nearbyVehicle, nextX, nextY, emergencyDistance)) {
+                nearestDistance = currentDistance;
+                nearestThreat = nearbyVehicle;
             }
         }
 
@@ -53,81 +67,132 @@ public class VehicleSafetyEngine {
     }
 
     /**
-     * Applies emergency braking/escape action against a detected threat.
+     * Applies an emergency maneuver against a detected threat.
      *
-     * @param state self vehicle state to mutate
-     * @param threat detected threat vehicle
+     * Depending on separation, this may:
+     * - perform a hard stop
+     * - apply soft braking
+     * - adjust the target heading away from the threat
+     *
+     * @param currentState current vehicle state to update
+     * @param threatVehicle detected threat vehicle
      * @param targetDirectionSetter callback used to update target steering
      */
-    public void applyEmergencyManeuver(VehicleState state,
-                                       VehicleState threat,
+    public void applyEmergencyManeuver(VehicleState currentState,
+                                       VehicleState threatVehicle,
                                        DoubleConsumer targetDirectionSetter) {
-        double dx = state.getX() - threat.getX();
-        double dy = state.getY() - threat.getY();
-        double separation = distance(state.getX(), state.getY(), threat.getX(), threat.getY());
-        double hardStopDistance = state.getRadius() + threat.getRadius() + HARD_STOP_EXTRA_MARGIN;
-        double softBrakeDistance = state.getRadius() + threat.getRadius() + SOFT_BRAKE_EXTRA_MARGIN;
+        double dx = currentState.getX() - threatVehicle.getX();
+        double dy = currentState.getY() - threatVehicle.getY();
+
+        double separation = distance(
+                currentState.getX(),
+                currentState.getY(),
+                threatVehicle.getX(),
+                threatVehicle.getY()
+        );
+
+        double hardStopDistance =
+                currentState.getRadius()
+                        + threatVehicle.getRadius()
+                        + HARD_STOP_EXTRA_MARGIN;
+
+        double softBrakeDistance =
+                currentState.getRadius()
+                        + threatVehicle.getRadius()
+                        + SOFT_BRAKE_EXTRA_MARGIN;
 
         double escapeHeading = Math.toDegrees(Math.atan2(dy, dx));
 
         if (separation <= hardStopDistance) {
-            state.setSpeed(Math.max(0.0, state.getSpeed() * config.getSafetyHardStopFactor()));
-            state.setStatus(VehicleStatus.STOPPED);
-            state.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
+            currentState.setSpeed(Math.max(
+                    0.0,
+                    currentState.getSpeed() * vehicleProcessConfig.getSafetyHardStopFactor()
+            ));
+            currentState.setStatus(VehicleStatus.STOPPED);
+            currentState.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
             targetDirectionSetter.accept(escapeHeading);
             return;
         }
 
         if (separation <= softBrakeDistance) {
-            state.setSpeed(Math.max(config.getSafetySoftBrakeMinimumSpeed(), state.getSpeed() * config.getSafetySoftBrakeFactor()));
-            state.setStatus(VehicleStatus.ACTIVE);
-            state.setCurrentAction(AvoidanceAction.SLOW_DOWN);
+            currentState.setSpeed(Math.max(
+                    vehicleProcessConfig.getSafetySoftBrakeMinimumSpeed(),
+                    currentState.getSpeed() * vehicleProcessConfig.getSafetySoftBrakeFactor()
+            ));
+            currentState.setStatus(VehicleStatus.ACTIVE);
+            currentState.setCurrentAction(AvoidanceAction.SLOW_DOWN);
             targetDirectionSetter.accept(escapeHeading);
             return;
         }
 
-        state.setStatus(VehicleStatus.ACTIVE);
-        state.setCurrentAction(AvoidanceAction.KEEP_COURSE);
+        currentState.setStatus(VehicleStatus.ACTIVE);
+        currentState.setCurrentAction(AvoidanceAction.KEEP_COURSE);
     }
 
     /**
-     * Tests whether a collision is imminent within the lookahead window.
+     * Checks whether a collision is likely within the lookahead window.
      *
-     * @param self current vehicle
-     * @param other potential threat vehicle
-     * @param selfNextX predicted next X position of self
-     * @param selfNextY predicted next Y position of self
-     * @param emergencyDistance safety boundary distance
-     * @return true when collision is likely within lookahead period
+     * A threat is considered immediate when:
+     * - the next predicted step is already too close, or
+     * - short lookahead prediction shows the vehicles entering the danger zone
+     *
+     * @param currentState current vehicle
+     * @param nearbyVehicle potential threat vehicle
+     * @param selfNextX predicted next x position
+     * @param selfNextY predicted next y position
+     * @param emergencyDistance minimum safe separation distance
+     * @return true when a collision is likely soon
      */
-    private boolean isEmergencyLikely(VehicleState self,
-                                      VehicleState other,
+    private boolean isEmergencyLikely(VehicleState currentState,
+                                      VehicleState nearbyVehicle,
                                       double selfNextX,
                                       double selfNextY,
                                       double emergencyDistance) {
-        double distanceAtNextStep = distance(selfNextX, selfNextY, other.getX(), other.getY());
+        double distanceAtNextStep = distance(
+                selfNextX,
+                selfNextY,
+                nearbyVehicle.getX(),
+                nearbyVehicle.getY()
+        );
+
         if (distanceAtNextStep <= emergencyDistance) {
             return true;
         }
 
-        double otherHeadingRad = Math.toRadians(other.getDirectionDeg());
-        double otherFutureX = other.getX() + Math.cos(otherHeadingRad) * other.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
-        double otherFutureY = other.getY() + Math.sin(otherHeadingRad) * other.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
+        double nearbyHeadingRad = Math.toRadians(nearbyVehicle.getDirectionDeg());
+        double nearbyFutureX =
+                nearbyVehicle.getX()
+                        + Math.cos(nearbyHeadingRad)
+                        * nearbyVehicle.getSpeed()
+                        * vehicleProcessConfig.getSafetyEmergencyLookaheadSeconds();
+        double nearbyFutureY =
+                nearbyVehicle.getY()
+                        + Math.sin(nearbyHeadingRad)
+                        * nearbyVehicle.getSpeed()
+                        * vehicleProcessConfig.getSafetyEmergencyLookaheadSeconds();
 
-        double selfHeadingRad = Math.toRadians(self.getDirectionDeg());
-        double selfFutureX = self.getX() + Math.cos(selfHeadingRad) * self.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
-        double selfFutureY = self.getY() + Math.sin(selfHeadingRad) * self.getSpeed() * config.getSafetyEmergencyLookaheadSeconds();
+        double selfHeadingRad = Math.toRadians(currentState.getDirectionDeg());
+        double selfFutureX =
+                currentState.getX()
+                        + Math.cos(selfHeadingRad)
+                        * currentState.getSpeed()
+                        * vehicleProcessConfig.getSafetyEmergencyLookaheadSeconds();
+        double selfFutureY =
+                currentState.getY()
+                        + Math.sin(selfHeadingRad)
+                        * currentState.getSpeed()
+                        * vehicleProcessConfig.getSafetyEmergencyLookaheadSeconds();
 
-        return distance(selfFutureX, selfFutureY, otherFutureX, otherFutureY) <= emergencyDistance;
+        return distance(selfFutureX, selfFutureY, nearbyFutureX, nearbyFutureY) <= emergencyDistance;
     }
 
     /**
-     * Euclidean distance between two points.
+     * Computes Euclidean distance between two points.
      *
-     * @param x1 first point X
-     * @param y1 first point Y
-     * @param x2 second point X
-     * @param y2 second point Y
+     * @param x1 first point x
+     * @param y1 first point y
+     * @param x2 second point x
+     * @param y2 second point y
      * @return distance
      */
     private double distance(double x1, double y1, double x2, double y2) {

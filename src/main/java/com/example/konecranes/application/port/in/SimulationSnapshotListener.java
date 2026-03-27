@@ -3,16 +3,19 @@ package com.example.konecranes.application.port.in;
 import com.example.konecranes.model.SimulationSnapshot;
 
 /**
- * Callback for receiving simulation snapshots from the stream use case.
+ * Listener for simulation snapshot events.
+ *
+ * Used by the streaming use case to deliver
+ * snapshot updates to subscribers.
  */
 @FunctionalInterface
 public interface SimulationSnapshotListener {
 
     /**
-     * Receives one snapshot event.
+     * Handles one simulation snapshot event.
      *
      * @param snapshot latest simulation snapshot
-     * @throws Exception thrown by listener implementation if delivery fails
+     * @throws Exception when the listener cannot process the snapshot
      */
     void onSnapshot(SimulationSnapshot snapshot) throws Exception;
 }

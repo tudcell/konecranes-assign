@@ -29,7 +29,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
- * Handles one inbound TCP vehicle session.
+ * Handles one TCP vehicle session.
+ *
+ * Reads incoming wire messages from the socket and dispatches them
+ * to the correct application use case.
  */
 @Service
 public class VehicleTcpSessionHandler {
@@ -40,20 +43,28 @@ public class VehicleTcpSessionHandler {
     private final RegisterVehicleSessionUseCase registerVehicleSessionUseCase;
     private final DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase;
     private final UpdateVehicleStateUseCase updateVehicleStateUseCase;
-    private final VehicleSessionRegistryPort sessionRegistryPort;
+    private final VehicleSessionRegistryPort vehicleSessionRegistryPort;
 
     public VehicleTcpSessionHandler(ObjectMapper objectMapper,
                                     RegisterVehicleSessionUseCase registerVehicleSessionUseCase,
                                     DisconnectVehicleSessionUseCase disconnectVehicleSessionUseCase,
                                     UpdateVehicleStateUseCase updateVehicleStateUseCase,
-                                    VehicleSessionRegistryPort sessionRegistryPort) {
+                                    VehicleSessionRegistryPort vehicleSessionRegistryPort) {
         this.objectMapper = objectMapper;
         this.registerVehicleSessionUseCase = registerVehicleSessionUseCase;
         this.disconnectVehicleSessionUseCase = disconnectVehicleSessionUseCase;
         this.updateVehicleStateUseCase = updateVehicleStateUseCase;
-        this.sessionRegistryPort = sessionRegistryPort;
+        this.vehicleSessionRegistryPort = vehicleSessionRegistryPort;
     }
 
+    /**
+     * Processes one connected vehicle socket until the session ends.
+     *
+     * Reads line-delimited JSON messages, dispatches them by type,
+     * and performs cleanup when the connection is closed.
+     *
+     * @param socket accepted vehicle socket
+     */
     public void handle(Socket socket) {
         String vehicleId = null;
 
@@ -67,9 +78,11 @@ public class VehicleTcpSessionHandler {
                 try {
                     message = objectMapper.readValue(line, WireMessage.class);
                     String resolvedVehicleId = handleMessage(message, writer);
+
                     if (resolvedVehicleId != null) {
                         vehicleId = resolvedVehicleId;
                     }
+
                     if (message.getType() == MessageType.DISCONNECT) {
                         break;
                     }
@@ -91,11 +104,19 @@ public class VehicleTcpSessionHandler {
         } finally {
             if (vehicleId != null) {
                 disconnectVehicleSessionUseCase.disconnect(new DisconnectVehicleSessionCommand(vehicleId));
-                sessionRegistryPort.detach(vehicleId);
+                vehicleSessionRegistryPort.detach(vehicleId);
             }
         }
     }
 
+    /**
+     * Dispatches one incoming wire message to the matching handler.
+     *
+     * @param message parsed wire message
+     * @param writer writer bound to the current socket
+     * @return resolved vehicle id when available, otherwise null
+     * @throws IOException when register handling fails while sending responses
+     */
     private String handleMessage(WireMessage message, BufferedWriter writer) throws IOException {
         if (message.getType() == MessageType.REGISTER) {
             return handleRegister(message, writer);
@@ -111,10 +132,21 @@ public class VehicleTcpSessionHandler {
         return null;
     }
 
+    /**
+     * Handles vehicle registration.
+     *
+     * Registers the active session channel, then delegates the actual
+     * registration logic to the application layer.
+     *
+     * @param message register message
+     * @param writer socket writer for this session
+     * @return registered vehicle id
+     * @throws IOException when registration flow fails
+     */
     private String handleRegister(WireMessage message, BufferedWriter writer) throws IOException {
         RegisterVehicleRequest request = objectMapper.convertValue(message.getPayload(), RegisterVehicleRequest.class);
 
-        sessionRegistryPort.attach(
+        vehicleSessionRegistryPort.attach(
                 request.getVehicleId(),
                 new TcpVehicleSessionChannel(writer, objectMapper)
         );
@@ -130,13 +162,22 @@ public class VehicleTcpSessionHandler {
             );
             registerVehicleSessionUseCase.register(command);
         } catch (IOException ex) {
-            sessionRegistryPort.detach(request.getVehicleId());
+            vehicleSessionRegistryPort.detach(request.getVehicleId());
             throw ex;
         }
 
         return request.getVehicleId();
     }
 
+    /**
+     * Handles a vehicle state update message.
+     *
+     * Converts the transport payload into an application command
+     * and forwards it to the update use case.
+     *
+     * @param message state update message
+     * @return vehicle id contained in the state payload
+     */
     private String handleStateUpdate(WireMessage message) {
         VehicleState state = objectMapper.convertValue(message.getPayload(), VehicleState.class);
 
@@ -157,32 +198,57 @@ public class VehicleTcpSessionHandler {
         return state.getId();
     }
 
+    /**
+     * Handles a disconnect message.
+     *
+     * @param message disconnect message
+     * @return disconnected vehicle id
+     */
     private String handleDisconnect(WireMessage message) {
-        Map<String, String> payload = objectMapper.convertValue(message.getPayload(), new TypeReference<>() {});
+        Map<String, String> payload = objectMapper.convertValue(
+                message.getPayload(),
+                new TypeReference<>() {}
+        );
         return payload.get("vehicleId");
     }
 
+    /**
+     * Checks whether the socket failure is an expected connection-close case.
+     *
+     * @param ex thrown I/O exception
+     * @return true when the exception indicates a normal socket close/reset
+     */
     private boolean isExpectedSocketClose(IOException ex) {
         if (!(ex instanceof SocketException)) {
             return false;
         }
+
         String message = ex.getMessage();
         if (message == null) {
             return true;
         }
+
         String normalized = message.toLowerCase();
         return normalized.contains("socket closed") || normalized.contains("connection reset");
     }
 
+    /**
+     * Shortens payload text before logging so logs stay readable.
+     *
+     * @param payload raw payload text
+     * @return abbreviated payload string
+     */
     private String abbreviate(String payload) {
         if (payload == null) {
             return "<null>";
         }
+
         String sanitized = payload.replace("\r", "").replace("\n", "");
         int max = 180;
         if (sanitized.length() <= max) {
             return sanitized;
         }
+
         return sanitized.substring(0, max) + "...";
     }
 }

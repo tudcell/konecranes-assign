@@ -14,7 +14,14 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
 
 /**
- * Handles manual override timing and AI action selection.
+ * Controls manual override timing and AI-based maneuver selection.
+ *
+ * This policy decides whether the vehicle should:
+ * - honor a temporary manual override
+ * - keep course
+ * - turn
+ * - slow down
+ * - stop
  */
 public class VehicleControlPolicy {
 
@@ -27,26 +34,37 @@ public class VehicleControlPolicy {
         this.config = config;
         this.decisionEngine = new AvoidanceDecisionEngine(
                 new RiskEstimator(config.getAiPredictionSteps(), config.getAiPredictionStepSeconds()),
-                config.getAiKeepCourseRiskThreshold());
+                config.getAiKeepCourseRiskThreshold()
+        );
     }
 
     /**
-     * Applies a manual control command and updates manual override timers.
+     * Applies one manual control command.
      *
-     * @param command command from coordinator
-     * @param state mutable self state
-     * @param targetDirectionSetter callback to set steering target
+     * This may:
+     * - update target direction
+     * - update speed
+     * - activate temporary manual override mode
+     *
+     * @param command command received from the coordinator
+     * @param state mutable current vehicle state
+     * @param targetDirectionSetter callback used to update steering target
      */
-    public void applyControlCommand(ControlCommand command, VehicleState state, DoubleConsumer targetDirectionSetter) {
+    public void applyControlCommand(ControlCommand command,
+                                    VehicleState state,
+                                    DoubleConsumer targetDirectionSetter) {
         if (command == null) {
             return;
         }
+
         if (command.getOverrideDirectionDeg() != null) {
             targetDirectionSetter.accept(command.getOverrideDirectionDeg());
         }
+
         if (command.getOverrideSpeed() != null) {
             state.setSpeed(Math.max(0.0, command.getOverrideSpeed()));
         }
+
         if (command.isManualOverride()) {
             manualOverrideActive.set(true);
             manualOverrideUntilMillis.set(System.currentTimeMillis() + config.getManualOverrideHoldMillis());
@@ -57,10 +75,14 @@ public class VehicleControlPolicy {
     /**
      * Executes one AI control tick when manual override is not active.
      *
-     * @param current mutable current state
-     * @param context nearby vehicle context
-     * @param targetDirectionGetter callback to read current target heading
-     * @param targetDirectionSetter callback to update target heading
+     * The decision engine evaluates the current vehicle state
+     * and nearby context, then updates steering, speed, status,
+     * and risk fields accordingly.
+     *
+     * @param current mutable current vehicle state
+     * @param context nearby vehicle states
+     * @param targetDirectionGetter callback used to read current target heading
+     * @param targetDirectionSetter callback used to update target heading
      */
     public void aiTick(VehicleState current,
                        List<VehicleState> context,
@@ -81,33 +103,47 @@ public class VehicleControlPolicy {
 
         switch (result.getAction()) {
             case TURN_LEFT:
-                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() - config.getAiTurnDeltaDeg());
+                targetDirectionSetter.accept(
+                        targetDirectionGetter.getAsDouble() - config.getAiTurnDeltaDeg()
+                );
                 break;
+
             case TURN_RIGHT:
-                targetDirectionSetter.accept(targetDirectionGetter.getAsDouble() + config.getAiTurnDeltaDeg());
+                targetDirectionSetter.accept(
+                        targetDirectionGetter.getAsDouble() + config.getAiTurnDeltaDeg()
+                );
                 break;
+
             case SLOW_DOWN:
-                // Only reduce speed if it's still above initial; don't compound reductions
+                // Prevent repeated slowdown from reducing speed indefinitely.
                 if (current.getSpeed() > config.getInitialSpeed()) {
-                    current.setSpeed(Math.max(config.getInitialSpeed(), current.getSpeed() * config.getAiSlowDownFactor()));
+                    current.setSpeed(Math.max(
+                            config.getInitialSpeed(),
+                            current.getSpeed() * config.getAiSlowDownFactor()
+                    ));
                 }
                 break;
+
             case EMERGENCY_STOP:
                 current.setSpeed(0.0);
                 current.setStatus(VehicleStatus.STOPPED);
                 break;
+
             case KEEP_COURSE:
                 if (current.getStatus() == VehicleStatus.STOPPED) {
                     current.setSpeed(config.getInitialSpeed());
                 } else if (current.getSpeed() < config.getInitialSpeed()) {
-                    // Gradually restore speed towards initial when no threat
-                    current.setSpeed(Math.min(config.getInitialSpeed(), current.getSpeed() * config.getAiRecoveryFactor()));
+                    // Restore speed gradually when the vehicle is safe again.
+                    current.setSpeed(Math.min(
+                            config.getInitialSpeed(),
+                            current.getSpeed() * config.getAiRecoveryFactor()
+                    ));
                 }
                 current.setStatus(VehicleStatus.ACTIVE);
                 break;
+
             default:
                 break;
         }
     }
 }
-

@@ -6,25 +6,31 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Scheduler that drives environment fan-out and snapshot publishing.
+ * Scheduler that drives periodic simulation tasks.
+ *
+ * Responsible for:
+ * - broadcasting environment updates to vehicles
+ * - publishing simulation snapshots to subscribers
  */
 @Component
 public class SimulationScheduler {
 
     private final EnvironmentBroadcastService environmentBroadcastService;
-    private final SimulationSnapshotPublisher snapshotPublisher;
+    private final SimulationSnapshotPublisher simulationSnapshotPublisher;
     private final SimulationQueryUseCase simulationQueryUseCase;
 
     public SimulationScheduler(EnvironmentBroadcastService environmentBroadcastService,
-                               SimulationSnapshotPublisher snapshotPublisher,
+                               SimulationSnapshotPublisher simulationSnapshotPublisher,
                                SimulationQueryUseCase simulationQueryUseCase) {
         this.environmentBroadcastService = environmentBroadcastService;
-        this.snapshotPublisher = snapshotPublisher;
+        this.simulationSnapshotPublisher = simulationSnapshotPublisher;
         this.simulationQueryUseCase = simulationQueryUseCase;
     }
 
     /**
      * Broadcasts environment updates to all active vehicles.
+     *
+     * Runs periodically using the configured scheduler delay.
      */
     @Scheduled(fixedDelayString = "${simulation.scheduler.fixedDelayMillis:150}")
     public void broadcastEnvironment() {
@@ -32,11 +38,12 @@ public class SimulationScheduler {
     }
 
     /**
-     * Publishes the latest snapshot to stream subscribers.
+     * Publishes the latest simulation snapshot to subscribers.
+     *
+     * Runs periodically using the configured scheduler delay.
      */
     @Scheduled(fixedDelayString = "${simulation.scheduler.fixedDelayMillis:150}")
     public void publishSnapshot() {
-        snapshotPublisher.publish(simulationQueryUseCase.currentSnapshot());
+        simulationSnapshotPublisher.publish(simulationQueryUseCase.currentSnapshot());
     }
 }
-

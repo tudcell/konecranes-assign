@@ -8,7 +8,10 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 /**
- * TCP-backed vehicle session channel that writes line-delimited JSON messages.
+ * TCP implementation of a vehicle session channel.
+ *
+ * Serializes wire messages as JSON and writes them
+ * as line-delimited messages to the socket writer.
  */
 public class TcpVehicleSessionChannel implements VehicleSessionChannel {
 
@@ -20,6 +23,15 @@ public class TcpVehicleSessionChannel implements VehicleSessionChannel {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Sends one wire message through the TCP session.
+     *
+     * Message serialization and writing are synchronized on the writer
+     * so concurrent sends do not interleave on the output stream.
+     *
+     * @param message wire message to send
+     * @throws IOException when serialization or socket writing fails
+     */
     @Override
     public void send(WireMessage message) throws IOException {
         synchronized (writer) {
@@ -29,6 +41,11 @@ public class TcpVehicleSessionChannel implements VehicleSessionChannel {
         }
     }
 
+    /**
+     * Closes the underlying TCP writer for this session.
+     *
+     * @throws IOException when close fails
+     */
     @Override
     public void close() throws IOException {
         writer.close();

@@ -1,14 +1,17 @@
 package com.example.konecranes.vehicle;
 
 /**
- * Standalone entry point used by spawned vehicle JVM processes.
+ * Entry point for a spawned vehicle JVM process.
+ *
+ * Parses the process configuration from command-line arguments
+ * and starts the vehicle runtime loop.
  */
 public class VehicleProcessMain {
 
     /**
-     * Builds process configuration from arguments and starts runtime loop.
+     * Starts one vehicle process.
      *
-     * @param args command line arguments in {@code --key=value} format
+     * @param args command-line arguments in --key=value format
      */
     public static void main(String[] args) {
         VehicleProcessConfig config = VehicleProcessConfig.fromArgs(args);

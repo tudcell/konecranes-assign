@@ -4,12 +4,15 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Spawns one or more vehicle JVM processes.
+ * Use case for spawning one or more vehicle processes.
+ *
+ * Starts new vehicle JVM instances and returns
+ * their assigned vehicle identifiers.
  */
 public interface VehicleSpawnUseCase {
 
     /**
-     * Starts the requested number of vehicle processes.
+     * Spawns the requested number of vehicle processes.
      *
      * @param count number of vehicles to create
      * @return created vehicle ids in spawn order

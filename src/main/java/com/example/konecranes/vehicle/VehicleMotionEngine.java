@@ -6,78 +6,98 @@ import com.example.konecranes.model.VehicleStatus;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Handles heading and boundary movement behavior.
+ * Handles heading changes and boundary bounce behavior for one vehicle.
+ *
+ * Responsible for:
+ * - rotating the vehicle toward a target direction
+ * - reflecting movement at world boundaries
+ * - restoring motion after a bounce when needed
  */
 public class VehicleMotionEngine {
 
-    private final VehicleProcessConfig config;
-    private final AtomicLong targetDirectionDegTimes100 = new AtomicLong(0L);
-
-    // Magic numbers extracted as constants
     private static final double REVERSE_ANGLE_DEG = 180.0;
     private static final double FULL_CIRCLE_DEG = 360.0;
     private static final double DEGREE_SCALE = 100.0;
     private static final double SIGNED_DELTA_MIN = -180.0;
 
-    public VehicleMotionEngine(VehicleProcessConfig config, double initialDirectionDeg) {
-        this.config = config;
+    private final VehicleProcessConfig vehicleProcessConfig;
+    private final AtomicLong targetDirectionDegTimes100 = new AtomicLong(0L);
+
+    public VehicleMotionEngine(VehicleProcessConfig vehicleProcessConfig, double initialDirectionDeg) {
+        this.vehicleProcessConfig = vehicleProcessConfig;
         setTargetDirection(initialDirectionDeg);
     }
 
     /**
-     * Rotates current heading toward target heading with bounded turn rate.
+     * Rotates the current heading toward the target heading.
      *
-     * @param state mutable self state
+     * The applied turn is limited by the configured maximum
+     * turn rate per tick.
+     *
+     * @param vehicleState mutable vehicle state
      */
-    public void rotateTowardsTarget(VehicleState state) {
-        double current = normalizeDirection(state.getDirectionDeg());
+    public void rotateTowardsTarget(VehicleState vehicleState) {
+        double current = normalizeDirection(vehicleState.getDirectionDeg());
         double target = getTargetDirection();
         double delta = shortestSignedDeltaDeg(current, target);
-        double boundedDelta = Math.max(-config.getMaxTurnDegPerTick(), Math.min(config.getMaxTurnDegPerTick(), delta));
-        state.setDirectionDeg(normalizeDirection(current + boundedDelta));
+        double boundedDelta = Math.max(
+                -vehicleProcessConfig.getMaxTurnDegPerTick(),
+                Math.min(vehicleProcessConfig.getMaxTurnDegPerTick(), delta)
+        );
+
+        vehicleState.setDirectionDeg(normalizeDirection(current + boundedDelta));
     }
 
     /**
-     * Applies world boundary reflection and speed/status recovery if needed.
+     * Applies boundary bounce behavior when the vehicle reaches world edges.
      *
-     * @param state mutable self state
+     * If a bounce happens:
+     * - position is clamped to the boundary
+     * - heading is reflected
+     * - target direction is updated to match the new heading
+     * - stopped vehicles may resume motion
+     *
+     * @param vehicleState mutable vehicle state
      */
-    public void bounceIfNeeded(VehicleState state) {
-        double radius = state.getRadius();
+    public void bounceIfNeeded(VehicleState vehicleState) {
+        double radius = vehicleState.getRadius();
         boolean bounced = false;
 
-        if (state.getX() <= radius) {
-            state.setX(radius);
-            state.setDirectionDeg(normalizeDirection(REVERSE_ANGLE_DEG - state.getDirectionDeg()));
+        if (vehicleState.getX() <= radius) {
+            vehicleState.setX(radius);
+            vehicleState.setDirectionDeg(normalizeDirection(REVERSE_ANGLE_DEG - vehicleState.getDirectionDeg()));
             bounced = true;
-        } else if (state.getX() >= config.getWorldWidth() - radius) {
-            state.setX(config.getWorldWidth() - radius);
-            state.setDirectionDeg(normalizeDirection(REVERSE_ANGLE_DEG - state.getDirectionDeg()));
-            bounced = true;
-        }
-
-        if (state.getY() <= radius) {
-            state.setY(radius);
-            state.setDirectionDeg(normalizeDirection(FULL_CIRCLE_DEG - state.getDirectionDeg()));
-            bounced = true;
-        } else if (state.getY() >= config.getWorldHeight() - radius) {
-            state.setY(config.getWorldHeight() - radius);
-            state.setDirectionDeg(normalizeDirection(FULL_CIRCLE_DEG - state.getDirectionDeg()));
+        } else if (vehicleState.getX() >= vehicleProcessConfig.getWorldWidth() - radius) {
+            vehicleState.setX(vehicleProcessConfig.getWorldWidth() - radius);
+            vehicleState.setDirectionDeg(normalizeDirection(REVERSE_ANGLE_DEG - vehicleState.getDirectionDeg()));
             bounced = true;
         }
 
-        if (bounced && state.getSpeed() <= 0.0) {
-            state.setSpeed(config.getInitialSpeed());
-            state.setStatus(VehicleStatus.ACTIVE);
+        if (vehicleState.getY() <= radius) {
+            vehicleState.setY(radius);
+            vehicleState.setDirectionDeg(normalizeDirection(FULL_CIRCLE_DEG - vehicleState.getDirectionDeg()));
+            bounced = true;
+        } else if (vehicleState.getY() >= vehicleProcessConfig.getWorldHeight() - radius) {
+            vehicleState.setY(vehicleProcessConfig.getWorldHeight() - radius);
+            vehicleState.setDirectionDeg(normalizeDirection(FULL_CIRCLE_DEG - vehicleState.getDirectionDeg()));
+            bounced = true;
+        }
+
+        if (bounced && vehicleState.getSpeed() <= 0.0) {
+            vehicleState.setSpeed(vehicleProcessConfig.getInitialSpeed());
+            vehicleState.setStatus(VehicleStatus.ACTIVE);
         }
 
         if (bounced) {
-            setTargetDirection(state.getDirectionDeg());
+            setTargetDirection(vehicleState.getDirectionDeg());
         }
     }
 
     /**
-     * Sets target heading used by turn-rate-limited rotation.
+     * Updates the target heading used by the motion engine.
+     *
+     * The value is stored as a scaled integer to keep updates atomic
+     * while preserving two decimal places of precision.
      *
      * @param direction desired heading in degrees
      */
@@ -87,29 +107,38 @@ public class VehicleMotionEngine {
     }
 
     /**
-     * @return target heading in degrees
+     * Returns the current target heading.
+     *
+     * @return target direction in degrees
      */
     public double getTargetDirection() {
         return targetDirectionDegTimes100.get() / DEGREE_SCALE;
     }
 
     /**
-     * Computes shortest signed rotation angle from one heading to another.
+     * Computes the shortest signed angular delta between two headings.
+     *
+     * The result is normalized to the range [-180, 180].
      *
      * @param fromDeg starting heading in degrees
      * @param toDeg target heading in degrees
-     * @return signed delta in range [-180, 180] degrees
+     * @return signed angular delta
      */
     private double shortestSignedDeltaDeg(double fromDeg, double toDeg) {
-        double delta = (toDeg - fromDeg + (REVERSE_ANGLE_DEG + FULL_CIRCLE_DEG)) % FULL_CIRCLE_DEG - REVERSE_ANGLE_DEG;
+        double delta =
+                (toDeg - fromDeg + (REVERSE_ANGLE_DEG + FULL_CIRCLE_DEG))
+                        % FULL_CIRCLE_DEG
+                        - REVERSE_ANGLE_DEG;
+
         if (delta == SIGNED_DELTA_MIN) {
             return REVERSE_ANGLE_DEG;
         }
+
         return delta;
     }
 
     /**
-     * Normalizes direction to range [0, 360) degrees.
+     * Normalizes a direction into the range [0, 360).
      *
      * @param direction input angle in degrees
      * @return normalized direction
@@ -119,4 +148,3 @@ public class VehicleMotionEngine {
         return normalized < 0.0 ? normalized + FULL_CIRCLE_DEG : normalized;
     }
 }
-

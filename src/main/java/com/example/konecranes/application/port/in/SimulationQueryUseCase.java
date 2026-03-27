@@ -3,14 +3,17 @@ package com.example.konecranes.application.port.in;
 import com.example.konecranes.model.SimulationSnapshot;
 
 /**
- * Exposes read-only simulation state queries.
+ * Use case for reading simulation state.
+ *
+ * Provides read-only access to the latest snapshot
+ * of the simulation world and vehicles.
  */
 public interface SimulationQueryUseCase {
 
     /**
-     * Returns the latest computed simulation snapshot.
+     * Returns the latest available simulation snapshot.
      *
-     * @return immutable view model of world and vehicle states
+     * @return current simulation snapshot
      */
     SimulationSnapshot currentSnapshot();
 }

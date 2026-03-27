@@ -13,8 +13,15 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Encapsulates per-vehicle behavior state and decision logic.
- * Transport and scheduling stay in VehicleProcessRuntime.
+ * Encapsulates the per-vehicle behavior state and decision logic.
+ *
+ * This class owns the local vehicle state and coordinates:
+ * - movement
+ * - control policy updates
+ * - immediate safety reactions
+ * - stuck detection and recovery
+ *
+ * Transport and scheduling remain outside this class.
  */
 public class VehicleBehaviorEngine {
 
@@ -47,9 +54,9 @@ public class VehicleBehaviorEngine {
     }
 
     /**
-     * Replaces the local perception context with the latest environment update.
+     * Replaces the current nearby-vehicle context with the latest environment update.
      *
-     * @param update nearby vehicle snapshot sent by coordinator
+     * @param update latest environment snapshot from the coordinator
      */
     public void onEnvironmentUpdate(EnvironmentUpdate update) {
         nearbyVehicles.clear();
@@ -68,7 +75,16 @@ public class VehicleBehaviorEngine {
     }
 
     /**
-     * Executes one movement tick, including immediate safety checks.
+     * Executes one movement tick.
+     *
+     * This includes:
+     * - rotating toward the current target heading
+     * - predicting the next position
+     * - checking for immediate threats
+     * - updating position
+     * - applying wall bounce behavior
+     * - refreshing timestamp
+     * - running stuck detection
      */
     public void movementTick() {
         VehicleState state = selfState.get();
@@ -79,9 +95,10 @@ public class VehicleBehaviorEngine {
         double nextX = state.getX() + Math.cos(directionRad) * state.getSpeed() * dtSeconds;
         double nextY = state.getY() + Math.sin(directionRad) * state.getSpeed() * dtSeconds;
 
-        // Check nearby vehicles for immediate threats (defensive copy prevents concurrent modification)
+        // Copy nearby states to avoid iteration issues while the map is being updated.
         List<VehicleState> nearby = new ArrayList<>(nearbyVehicles.values());
         VehicleState threat = safetyEngine.findImmediateThreat(state, nearby, nextX, nextY);
+
         if (threat != null) {
             safetyEngine.applyEmergencyManeuver(state, threat, motionEngine::setTargetDirection);
             motionEngine.bounceIfNeeded(state);
@@ -95,12 +112,17 @@ public class VehicleBehaviorEngine {
         motionEngine.bounceIfNeeded(state);
         state.setTimestamp(System.currentTimeMillis());
 
-        // Check if vehicle is stuck and apply emergency escape if needed
         checkAndEscapeIfStuck(state);
     }
 
     /**
-     * Executes one AI/control policy tick using the latest nearby context.
+     * Executes one control-policy tick using the latest nearby context.
+     *
+     * The control policy may:
+     * - preserve manual override
+     * - choose a new AI action
+     * - adjust target direction
+     * - adjust speed
      */
     public void aiTick() {
         VehicleState current = selfState.get();
@@ -109,9 +131,14 @@ public class VehicleBehaviorEngine {
     }
 
     /**
-     * Detects if vehicle is stuck (no movement for extended period) and applies escape maneuver.
+     * Detects whether the vehicle is stuck and applies a recovery maneuver if needed.
      *
-     * @param state current vehicle state to mutate
+     * A vehicle is treated as stuck when:
+     * - it is still active
+     * - it has moved less than the configured distance threshold
+     * - enough time has passed since the last position snapshot
+     *
+     * @param state current vehicle state to update
      */
     private void checkAndEscapeIfStuck(VehicleState state) {
         PositionSnapshot snapshot = lastPositionSnapshot.get();
@@ -119,29 +146,26 @@ public class VehicleBehaviorEngine {
         double distance = distance(state.getX(), state.getY(), snapshot.x, snapshot.y);
         long timeDelta = now - snapshot.timestamp;
 
-        // If vehicle hasn't moved much and has been stuck for too long, apply escape maneuver
-        if (state.getStatus() == VehicleStatus.ACTIVE && 
-            timeDelta > config.getStuckTimeMillis() && 
-            distance < config.getStuckDistanceThreshold()) {
-            // Reverse direction and boost speed to break deadlock
+        if (state.getStatus() == VehicleStatus.ACTIVE
+                && timeDelta > config.getStuckTimeMillis()
+                && distance < config.getStuckDistanceThreshold()) {
             state.setDirectionDeg(normalizeDirection(state.getDirectionDeg() + 180.0));
             motionEngine.setTargetDirection(state.getDirectionDeg());
             state.setSpeed(config.getInitialSpeed() * config.getStuckEscapeSpeedFactor());
             state.setCurrentAction(AvoidanceAction.EMERGENCY_STOP);
             lastPositionSnapshot.set(new PositionSnapshot(state.getX(), state.getY(), now));
         } else if (timeDelta > config.getStuckTimeMillis()) {
-            // Reset snapshot periodically to allow fresh stuck detection
             lastPositionSnapshot.set(new PositionSnapshot(state.getX(), state.getY(), now));
         }
     }
 
     /**
-     * Euclidean distance between two points.
+     * Computes Euclidean distance between two points.
      *
-     * @param x1 first point X
-     * @param y1 first point Y
-     * @param x2 second point X
-     * @param y2 second point Y
+     * @param x1 first point x
+     * @param y1 first point y
+     * @param x2 second point x
+     * @param y2 second point y
      * @return distance
      */
     private double distance(double x1, double y1, double x2, double y2) {
@@ -149,9 +173,9 @@ public class VehicleBehaviorEngine {
     }
 
     /**
-     * Normalizes direction to range [0, 360) degrees.
+     * Normalizes a direction into the range [0, 360).
      *
-     * @param direction input angle
+     * @param direction input angle in degrees
      * @return normalized direction
      */
     private double normalizeDirection(double direction) {
@@ -160,27 +184,28 @@ public class VehicleBehaviorEngine {
     }
 
     /**
-     * Returns a defensive copy of the current self state for transport.
+     * Returns a detached copy of the current vehicle state.
      *
-     * @return detached vehicle state snapshot
+     * Used when state must be exposed outside this engine
+     * without sharing the mutable internal instance.
+     *
+     * @return copied vehicle state
      */
     public VehicleState currentStateCopy() {
         return selfState.get().copy();
     }
 
     /**
-     * Snapshot of vehicle position and timestamp for stuck detection.
+     * Small value object used for stuck detection.
+     *
+     * Stores the last observed position and timestamp
+     * used to measure recent movement progress.
      */
     private static class PositionSnapshot {
         final double x;
         final double y;
         final long timestamp;
 
-        /**
-         * @param x X coordinate
-         * @param y Y coordinate
-         * @param timestamp timestamp in epoch milliseconds
-         */
         PositionSnapshot(double x, double y, long timestamp) {
             this.x = x;
             this.y = y;
@@ -188,6 +213,3 @@ public class VehicleBehaviorEngine {
         }
     }
 }
-
-
-

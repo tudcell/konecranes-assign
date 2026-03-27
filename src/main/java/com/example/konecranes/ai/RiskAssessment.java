@@ -4,26 +4,26 @@ import com.example.konecranes.model.RiskLevel;
 import lombok.Getter;
 
 /**
- * Value object containing numeric and categorical collision risk outputs.
+ * Immutable result of one risk evaluation.
+ *
+ * Contains both:
+ * - the numeric risk score
+ * - the categorical risk level derived from that score
  */
 @Getter
 public class RiskAssessment {
-    /**
-     * @return normalized risk score
-     */
+
     private final double riskScore;
-    /**
-     * @return coarse risk level
-     */
     private final RiskLevel riskLevel;
 
     /**
-     * @param riskScore normalized risk score
-     * @param riskLevel coarse risk level
+     * Creates a new risk assessment result.
+     *
+     * @param riskScore normalized numeric risk score
+     * @param riskLevel categorical risk bucket
      */
     public RiskAssessment(double riskScore, RiskLevel riskLevel) {
         this.riskScore = riskScore;
         this.riskLevel = riskLevel;
     }
-
 }

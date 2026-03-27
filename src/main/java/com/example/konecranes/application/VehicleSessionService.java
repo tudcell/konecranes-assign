@@ -18,31 +18,40 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 
 /**
- * Application service for vehicle session registration and disconnect handling.
+ * Application service responsible for vehicle session lifecycle.
+ *
+ * Handles:
+ * - initial vehicle registration
+ * - initial handshake responses
+ * - vehicle disconnect state updates
  */
 @Service
 public class VehicleSessionService implements RegisterVehicleSessionUseCase, DisconnectVehicleSessionUseCase {
 
     private final VehicleStateRepository vehicleStateRepository;
-    private final VehicleRegistrationGatewayPort registrationGatewayPort;
-    private final VehicleEnvironmentGatewayPort environmentGatewayPort;
-    private final SimulationProperties properties;
+    private final VehicleRegistrationGatewayPort vehicleRegistrationGatewayPort;
+    private final VehicleEnvironmentGatewayPort vehicleEnvironmentGatewayPort;
+    private final SimulationProperties simulationProperties;
 
     public VehicleSessionService(VehicleStateRepository vehicleStateRepository,
-                                 VehicleRegistrationGatewayPort registrationGatewayPort,
-                                 VehicleEnvironmentGatewayPort environmentGatewayPort,
-                                 SimulationProperties properties) {
+                                 VehicleRegistrationGatewayPort vehicleRegistrationGatewayPort,
+                                 VehicleEnvironmentGatewayPort vehicleEnvironmentGatewayPort,
+                                 SimulationProperties simulationProperties) {
         this.vehicleStateRepository = vehicleStateRepository;
-        this.registrationGatewayPort = registrationGatewayPort;
-        this.environmentGatewayPort = environmentGatewayPort;
-        this.properties = properties;
+        this.vehicleRegistrationGatewayPort = vehicleRegistrationGatewayPort;
+        this.vehicleEnvironmentGatewayPort = vehicleEnvironmentGatewayPort;
+        this.simulationProperties = simulationProperties;
     }
 
     /**
-     * Registers a vehicle session, persists initial state, sends ACK and environment snapshot.
+     * Registers a newly connected vehicle session.
+     *
+     * Creates and stores the initial vehicle state, then sends:
+     * - a registration acknowledgement
+     * - the initial environment snapshot for that vehicle
      *
      * @param command registration input
-     * @throws IOException when ACK or environment send fails
+     * @throws IOException when the handshake responses cannot be sent
      */
     @Override
     public void register(RegisterVehicleSessionCommand command) throws IOException {
@@ -60,17 +69,25 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
 
         RegisterVehicleAck ack = new RegisterVehicleAck();
         ack.setVehicleId(command.getVehicleId());
-        ack.setWorld(new SimulationWorld(properties.getWorld().getWidth(), properties.getWorld().getHeight()));
-        registrationGatewayPort.sendAck(command.getVehicleId(), ack);
+        ack.setWorld(new SimulationWorld(
+                simulationProperties.getWorld().getWidth(),
+                simulationProperties.getWorld().getHeight()
+        ));
+
+        vehicleRegistrationGatewayPort.sendAck(command.getVehicleId(), ack);
 
         EnvironmentUpdate environment = new EnvironmentUpdate();
         environment.setNearbyVehicles(vehicleStateRepository.findAllExcept(command.getVehicleId()));
         environment.setTimestamp(System.currentTimeMillis());
-        environmentGatewayPort.sendEnvironment(command.getVehicleId(), environment);
+
+        vehicleEnvironmentGatewayPort.sendEnvironment(command.getVehicleId(), environment);
     }
 
     /**
-     * Marks a vehicle as disconnected in the state store.
+     * Marks a vehicle as disconnected in the repository.
+     *
+     * If the command or vehicle id is null, nothing happens.
+     * If the vehicle does not exist in the repository, nothing happens.
      *
      * @param command disconnect input
      */
@@ -79,10 +96,10 @@ public class VehicleSessionService implements RegisterVehicleSessionUseCase, Dis
         if (command == null || command.getVehicleId() == null) {
             return;
         }
+
         vehicleStateRepository.findById(command.getVehicleId()).ifPresent(state -> {
             state.setStatus(VehicleStatus.DISCONNECTED);
             vehicleStateRepository.upsert(state);
         });
     }
 }
-

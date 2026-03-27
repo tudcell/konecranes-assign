@@ -3,14 +3,17 @@ package com.example.konecranes.application.port.out;
 import com.example.konecranes.model.SimulationSnapshot;
 
 /**
- * Outbound port for publishing simulation snapshots to subscribers.
+ * Outbound port for publishing simulation snapshot events.
+ *
+ * Used by the application layer to deliver the latest
+ * simulation snapshot to subscribed listeners or streams.
  */
 public interface SimulationSnapshotPublisher {
 
     /**
-     * Publishes one simulation snapshot event.
+     * Publishes one simulation snapshot.
      *
-     * @param snapshot snapshot payload to broadcast
+     * @param snapshot snapshot to broadcast
      */
     void publish(SimulationSnapshot snapshot);
 }

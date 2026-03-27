@@ -6,17 +6,24 @@ import com.example.konecranes.model.VehicleState;
 import java.util.List;
 
 /**
- * Estimates collision risk for a vehicle against nearby traffic.
+ * Estimates collision risk for one vehicle against nearby traffic.
+ *
+ * Produces:
+ * - a numeric risk score
+ * - a categorical risk level
+ *
+ * The estimator combines current distance, predicted future distance,
+ * closing behavior, and heading alignment into one score.
  */
-
 public class RiskEstimator {
-    // Risk calculation constants (not meant to be configured externally)
+
+    // Internal constants used by the risk formula.
     private static final double DANGER_DISTANCE_MARGIN = 18.0;
     private static final double RELATIVE_SPEED_FACTOR = 0.10;
     private static final double PROXIMITY_SAFE_MAX = 220.0;
     private static final double FUTURE_SAFE_MAX = 180.0;
 
-    // Risk level thresholds
+    // Risk level thresholds.
     private static final double RISK_LEVEL_HIGH = 0.82;
     private static final double RISK_LEVEL_MEDIUM = 0.50;
 
@@ -29,29 +36,39 @@ public class RiskEstimator {
     }
 
     /**
-     * Computes aggregate risk and risk level from nearby vehicles.
+     * Computes the overall risk for one vehicle against nearby vehicles.
+     *
+     * The returned risk is the maximum pairwise risk found in the nearby set.
      *
      * @param self current vehicle
-     * @param nearbyVehicles nearby context vehicles
+     * @param nearbyVehicles nearby vehicle states
      * @return aggregated risk assessment
      */
     public RiskAssessment assess(VehicleState self, List<VehicleState> nearbyVehicles) {
         double maxRisk = 0.0;
+
         for (VehicleState other : nearbyVehicles) {
             if (self.getId().equals(other.getId())) {
                 continue;
             }
             maxRisk = Math.max(maxRisk, pairwiseRisk(self, other));
         }
+
         return new RiskAssessment(maxRisk, toLevel(maxRisk));
     }
 
     /**
-     * Computes pairwise risk score between two vehicles.
+     * Computes the pairwise collision risk between two vehicles.
+     *
+     * The score combines:
+     * - current proximity
+     * - predicted minimum future distance
+     * - closing behavior
+     * - heading convergence
      *
      * @param a first vehicle
      * @param b second vehicle
-     * @return normalized score in range [0, 1]
+     * @return normalized risk score in range [0, 1]
      */
     public double pairwiseRisk(VehicleState a, VehicleState b) {
         double distanceNow = distance(a.getX(), a.getY(), b.getX(), b.getY());
@@ -60,7 +77,11 @@ public class RiskEstimator {
         double intersectionFactor = headingConvergence(a, b);
         double relativeSpeed = Math.abs(a.getSpeed() - b.getSpeed());
 
-        double dangerDistance = a.getRadius() + b.getRadius() + DANGER_DISTANCE_MARGIN + (relativeSpeed * RELATIVE_SPEED_FACTOR);
+        double dangerDistance =
+                a.getRadius() + b.getRadius()
+                        + DANGER_DISTANCE_MARGIN
+                        + (relativeSpeed * RELATIVE_SPEED_FACTOR);
+
         double proximityScore = inverseNormalize(distanceNow, dangerDistance, PROXIMITY_SAFE_MAX);
         double futureScore = inverseNormalize(minPredictedDistance, dangerDistance, FUTURE_SAFE_MAX);
 
@@ -73,10 +94,10 @@ public class RiskEstimator {
     }
 
     /**
-     * Maps numeric risk score to categorical risk level.
+     * Maps a numeric score to a categorical risk level.
      *
-     * @param score numeric score in range [0, 1]
-     * @return coarse risk level
+     * @param score numeric risk score
+     * @return low, medium, or high risk level
      */
     private RiskLevel toLevel(double score) {
         if (score >= RISK_LEVEL_HIGH) {
@@ -89,19 +110,22 @@ public class RiskEstimator {
     }
 
     /**
-     * Predicts minimum distance between two vehicles over next prediction window.
+     * Predicts the minimum distance between two vehicles
+     * over the configured lookahead window.
      *
      * @param a first vehicle
      * @param b second vehicle
-     * @return minimum distance during lookahead period
+     * @return minimum predicted distance
      */
     private double predictedMinimumDistance(VehicleState a, VehicleState b) {
         double ax = a.getX();
         double ay = a.getY();
         double bx = b.getX();
         double by = b.getY();
+
         double ar = Math.toRadians(a.getDirectionDeg());
         double br = Math.toRadians(b.getDirectionDeg());
+
         double minDistance = Double.MAX_VALUE;
 
         for (int i = 0; i < predictionSteps; i++) {
@@ -116,11 +140,11 @@ public class RiskEstimator {
     }
 
     /**
-     * Estimates closing velocity component between two vehicles.
+     * Estimates how strongly two vehicles are moving toward each other.
      *
      * @param a first vehicle
      * @param b second vehicle
-     * @return closing factor in range [0, 1]
+     * @return normalized closing factor in range [0, 1]
      */
     private double closingFactor(VehicleState a, VehicleState b) {
         double relPosX = b.getX() - a.getX();
@@ -139,11 +163,13 @@ public class RiskEstimator {
     }
 
     /**
-     * Measures heading alignment between two vehicles.
+     * Measures how much two headings are converging.
+     *
+     * Vehicles with more similar heading angles produce a higher value.
      *
      * @param a first vehicle
      * @param b second vehicle
-     * @return convergence factor in range [0, 1]
+     * @return normalized convergence factor in range [0, 1]
      */
     private double headingConvergence(VehicleState a, VehicleState b) {
         double angle = Math.abs(normalizeAngle(a.getDirectionDeg() - b.getDirectionDeg()));
@@ -152,12 +178,15 @@ public class RiskEstimator {
     }
 
     /**
-     * Inverse normalization: high values near safeMin map to 1.0, high values near safeMax map to 0.0.
+     * Inverse-normalizes a value into the range [0, 1].
+     *
+     * Values near safeMin map closer to 1.0.
+     * Values near or above safeMax map closer to 0.0.
      *
      * @param value input value
-     * @param safeMin safe distance lower bound
-     * @param safeMax safe distance upper bound
-     * @return normalized score in range [0, 1]
+     * @param safeMin lower bound
+     * @param safeMax upper bound
+     * @return normalized score
      */
     private double inverseNormalize(double value, double safeMin, double safeMax) {
         if (value <= safeMin) {
@@ -170,12 +199,12 @@ public class RiskEstimator {
     }
 
     /**
-     * Euclidean distance between two points.
+     * Computes Euclidean distance between two points.
      *
-     * @param x1 first point X
-     * @param y1 first point Y
-     * @param x2 second point X
-     * @param y2 second point Y
+     * @param x1 first point x
+     * @param y1 first point y
+     * @param x2 second point x
+     * @param y2 second point y
      * @return distance
      */
     private double distance(double x1, double y1, double x2, double y2) {
@@ -183,7 +212,7 @@ public class RiskEstimator {
     }
 
     /**
-     * Normalizes angle to range [-180, 180] degrees.
+     * Normalizes an angle into the range [-180, 180].
      *
      * @param degrees input angle
      * @return normalized angle
@@ -200,11 +229,11 @@ public class RiskEstimator {
     }
 
     /**
-     * Clamps value within [min, max] bounds.
+     * Clamps a value into the given range.
      *
      * @param value input value
-     * @param min minimum bound
-     * @param max maximum bound
+     * @param min lower bound
+     * @param max upper bound
      * @return clamped value
      */
     private double clamp(double value, double min, double max) {

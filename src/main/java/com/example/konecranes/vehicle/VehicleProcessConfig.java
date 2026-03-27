@@ -6,9 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Immutable-at-runtime configuration for a spawned vehicle process.
+ * Configuration for one spawned vehicle process.
  *
- * <p>Values are parsed from command line arguments provided by the coordinator.</p>
+ * Values are parsed once from command-line arguments
+ * provided by the coordinator at process startup.
  */
 @Getter
 public class VehicleProcessConfig {
@@ -45,24 +46,36 @@ public class VehicleProcessConfig {
     private long reconnectMaxBackoffMillis;
 
     /**
-     * Parses command line arguments into a vehicle process configuration.
+     * Parses command-line arguments into a vehicle process configuration.
      *
-     * @param args process arguments in --key=value form
-     * @return parsed config object
+     * Expected format:
+     * --key=value
+     *
+     * Required argument:
+     * - vehicleId
+     *
+     * Other values fall back to defaults when not provided.
+     *
+     * @param args process arguments
+     * @return parsed vehicle process configuration
      */
     public static VehicleProcessConfig fromArgs(String[] args) {
         Map<String, String> values = new HashMap<>();
+
         for (String arg : args) {
             if (arg.startsWith("--") && arg.contains("=")) {
                 String[] parts = arg.substring(2).split("=", 2);
                 values.put(parts[0], parts[1]);
             }
         }
+
         VehicleProcessConfig config = new VehicleProcessConfig();
+
         String vehicleId = values.get("vehicleId");
         if (vehicleId == null || vehicleId.trim().isEmpty()) {
             throw new IllegalArgumentException("vehicleId is required");
         }
+
         config.vehicleId = vehicleId;
         config.gatewayHost = values.getOrDefault("gatewayHost", "127.0.0.1");
         config.gatewayPort = Integer.parseInt(values.getOrDefault("gatewayPort", "9090"));
@@ -92,7 +105,7 @@ public class VehicleProcessConfig {
         config.reconnectMaxAttempts = Integer.parseInt(values.getOrDefault("reconnectMaxAttempts", "8"));
         config.reconnectInitialBackoffMillis = Long.parseLong(values.getOrDefault("reconnectInitialBackoffMillis", "500"));
         config.reconnectMaxBackoffMillis = Long.parseLong(values.getOrDefault("reconnectMaxBackoffMillis", "5000"));
+
         return config;
     }
-
 }
