@@ -42,14 +42,14 @@ java -jar target/konecranes-ai-sim-1.0.0.jar
 
 ### Run from the IDE
 
-You can also run the coordinator directly from your IDE.
+You can also run the coordinator directly from the IDE.
 
 - Main class: `com.example.konecranes.ApplicationLauncher`
 - Coordinator mode is the default. Vehicle mode is internal and used when launching child JVMs with `--mode=vehicle`.
 
 ### Open the web UI
 
-Open your browser at:
+Open the browser at:
 
 ```
 http://localhost:8080
