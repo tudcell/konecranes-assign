@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Immutable-style value object describing world bounds.
+ * Value object describing world bounds.
  */
 @Setter
 @Getter
