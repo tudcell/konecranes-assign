@@ -26,30 +26,20 @@ The application runs a coordinator process plus multiple independently spawned v
 ### Prerequisites
 
 - Java 11 or newer (JDK)
-- Maven
+- IntelliJ IDEA
 
-### Build
+### Build and run in IntelliJ
 
-```bash
-mvn clean package
-```
-
-### Start the coordinator process
-
-```bash
-java -jar target/konecranes-ai-sim-1.0.0.jar
-```
-
-### Run from the IDE
-
-You can also run the coordinator directly from the IDE.
-
-- Main class: `com.example.konecranes.ApplicationLauncher`
-- Coordinator mode is the default. Vehicle mode is internal and used when launching child JVMs with `--mode=vehicle`.
+1. Open the project in IntelliJ IDEA.
+2. Open the **Maven** tool window.
+3. Under **Lifecycle**, run **clean**.
+4. Then under **Lifecycle**, run **package**.
+5. After the build finishes, run the `ApplicationLauncher` class:
+   `com.example.konecranes.ApplicationLauncher`
 
 ### Open the web UI
 
-Open the browser at:
+After the application starts, open your browser and go to:
 
 ```
 http://localhost:8080
